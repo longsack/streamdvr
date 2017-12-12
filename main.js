@@ -5,6 +5,7 @@ require("events").EventEmitter.prototype._maxListeners = 100;
 // 3rd Party Libraries
 const Promise    = require("bluebird");
 const fs         = require("fs");
+const util       = require("util");
 const yaml       = require("js-yaml");
 const mkdirp     = require("mkdirp");
 const colors     = require("colors/safe");
@@ -23,6 +24,12 @@ let mfc = null;
 let cb = null;
 let twitch = null;
 const SITES = [];
+
+let log_file = fs.createWriteStream(__dirname + '/streamdvr.log', {flags: "w"});
+
+console.log = function(msg) {
+    log_file.write(util.format(msg) + "\n");
+};
 
 let total = 0;
 let inst = 1;

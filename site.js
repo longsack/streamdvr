@@ -385,9 +385,11 @@ class Site {
     }
 
     msg(msg) {
-        this.logbody.pushLine(colors.time("[" + this.getDateTime() + "]") + " " + colors.site(this.siteName) + " " + msg);
+        const line = colors.time("[" + this.getDateTime() + "]") + " " + colors.site(this.siteName) + " " + msg;
+        this.logbody.pushLine(line);
         this.logbody.setScrollPerc(100);
         this.screen.render();
+        console.log(line);
     }
 
     errMsg(msg) {
