@@ -86,7 +86,7 @@ class Cb extends site.Site {
         let isBroadcasting = 0;
 
         return Promise.try(function() {
-            return fetch(url);
+            return fetch(url, {timeout: me.timeOut});
         }).then((res) => res.json()).then(function(json) {
             const listitem = me.streamerList.get(nm);
 
