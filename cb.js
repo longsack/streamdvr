@@ -6,6 +6,11 @@ const fs      = require("fs");
 const yaml    = require("js-yaml");
 const site    = require("./site");
 
+const promiseSerial = funcs =>
+  funcs.reduce((promise, func) =>
+    promise.then(result => func().then(Array.prototype.concat.bind(result))),
+    Promise.resolve([]));
+
 class Cb extends site.Site {
     constructor(config, screen, logbody, inst, total) {
         super("CB    ", config, "_cb", screen, logbody, inst, total);
@@ -163,14 +168,18 @@ class Cb extends site.Site {
         }
         this.render();
 
-        const queries = [];
-
-        me.streamerList.forEach(function(value) {
-            queries.push(me.checkStreamerState(value.nm));
+        const nms = [];
+        this.streamerList.forEach(function(value) {
+            nms.push(value.nm);
         });
 
-        return Promise.all(queries).then(function() {
+        const funcs = nms.map((nm) => () => me.checkStreamerState(nm));
+
+        // execute Promises in serial
+        return promiseSerial(funcs).then(function() {
             return me.streamersToCap;
+        }).catch(function(err) {
+            me.errMsg(err.toString());
         });
     }
 
