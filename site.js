@@ -205,7 +205,6 @@ class Site {
     }
 
     haltAllCaptures() {
-        this.msg("aborting");
         this.currentlyCapping.forEach(function(value) {
             value.captureProcess.kill("SIGINT");
         });

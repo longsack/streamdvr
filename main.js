@@ -25,10 +25,10 @@ let cb = null;
 let twitch = null;
 const SITES = [];
 
-let log_file = fs.createWriteStream(__dirname + '/streamdvr.log', {flags: "w"});
+const logFile = fs.createWriteStream(path.resolve() + "/streamdvr.log", {flags: "w"});
 
 console.log = function(msg) {
-    log_file.write(util.format(msg) + "\n");
+    logFile.write(util.format(msg) + "\n");
 };
 
 let total = 0;
@@ -76,6 +76,7 @@ const inputBar = blessed.textbox({
 function log(text) {
     logbody.pushLine(text);
     screen.render();
+    console.log(text);
 }
 
 function showlist() {
@@ -187,11 +188,16 @@ function exit() {
         tryingToExit = 1;
         if (busy()) {
             log("Waiting for ffmpeg captures to terminate.");
-            for (let i = 0; i < SITES.length; i++) {
-                SITES[i].haltAllCaptures();
-            }
         }
         tryExit();
+    }
+
+    // Allow this to execute multiple times so that SIGINT
+    // can get passed again to ffmpeg in case some get hung.
+    if (busy()) {
+        for (let i = 0; i < SITES.length; i++) {
+            SITES[i].haltAllCaptures();
+        }
     }
 }
 
