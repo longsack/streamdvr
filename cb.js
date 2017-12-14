@@ -6,10 +6,9 @@ const fs      = require("fs");
 const yaml    = require("js-yaml");
 const site    = require("./site");
 
-const promiseSerial = funcs =>
-  funcs.reduce((promise, func) =>
-    promise.then(result => func().then(Array.prototype.concat.bind(result))),
-    Promise.resolve([]));
+function promiseSerial(funcs) {
+    return funcs.reduce((promise, func) => promise.then((result) => func().then(Array.prototype.concat.bind(result))), Promise.resolve([]));
+}
 
 class Cb extends site.Site {
     constructor(config, screen, logbody, inst, total) {
@@ -193,20 +192,19 @@ class Cb extends site.Site {
         // and also helps limit spikes in CPU usage.
         const serRuns = [];
         let count = 0;
-        let funcs;
 
         while (count < nms.length) {
             const parBatch = [];
             const batchSize = this.config.batchSizeCB === 0 ? nms.length : count + this.config.batchSizeCB;
 
             for (let i = count; (i < batchSize) && (i < nms.length); i++) {
-               parBatch.push(nms[i]);
-               count++;
+                parBatch.push(nms[i]);
+                count++;
             }
             serRuns.push(parBatch);
         }
 
-        funcs = serRuns.map((batch) => () => this.checkStreamersState(batch));
+        const funcs = serRuns.map((batch) => () => this.checkStreamersState(batch));
 
         return promiseSerial(funcs).then(function() {
             return me.streamersToCap;
