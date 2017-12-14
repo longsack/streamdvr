@@ -155,6 +155,21 @@ class Cb extends site.Site {
         });
     }
 
+    checkStreamersState(batch) {
+        const me = this;
+        const queries = [];
+
+        for (let i = 0; i < batch.length; i++) {
+            queries.push(this.checkStreamerState(batch[i]));
+        }
+
+        return Promise.all(queries).then(function() {
+            return true;
+        }).catch(function(err) {
+            me.errMsg(err.toString());
+        });
+    }
+
     getStreamersToCap() {
         const me = this;
 
@@ -173,9 +188,26 @@ class Cb extends site.Site {
             nms.push(value.nm);
         });
 
-        const funcs = nms.map((nm) => () => me.checkStreamerState(nm));
+        // Break the CB list up into batches - this throttles
+        // the total number of simultaneous URL fetches to CB
+        // and also helps limit spikes in CPU usage.
+        const serRuns = [];
+        let count = 0;
+        let funcs;
 
-        // execute Promises in serial
+        while (count < nms.length) {
+            const parBatch = [];
+            const batchSize = this.config.batchSizeCB === 0 ? nms.length : count + this.config.batchSizeCB;
+
+            for (let i = count; (i < batchSize) && (i < nms.length); i++) {
+               parBatch.push(nms[i]);
+               count++;
+            }
+            serRuns.push(parBatch);
+        }
+
+        funcs = serRuns.map((batch) => () => this.checkStreamersState(batch));
+
         return promiseSerial(funcs).then(function() {
             return me.streamersToCap;
         }).catch(function(err) {
