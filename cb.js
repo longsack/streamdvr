@@ -161,10 +161,10 @@ class Cb extends site.Site {
         });
     }
 
-    setupCapture(streamer, tryingToExit) {
+    setupCapture(streamer) {
         const me = this;
 
-        if (!super.setupCapture(streamer, tryingToExit)) {
+        if (!super.setupCapture(streamer)) {
             return Promise.try(function() {
                 return {spawnArgs: "", filename: "", streamer: ""};
             });
@@ -184,7 +184,7 @@ class Cb extends site.Site {
         });
     }
 
-    recordStreamers(streamersToCap, tryingToExit) {
+    recordStreamers(streamersToCap) {
         if (streamersToCap === null || streamersToCap.length === 0) {
             return null;
         }
@@ -194,9 +194,9 @@ class Cb extends site.Site {
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i], tryingToExit).then(function(bundle) {
+            const cap = this.setupCapture(streamersToCap[i]).then(function(bundle) {
                 if (bundle.spawnArgs !== "") {
-                    me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer, tryingToExit);
+                    me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
                 }
             });
             caps.push(cap);

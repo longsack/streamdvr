@@ -174,13 +174,18 @@ function mainSiteLoop(site) {
     }).then(function(bundle) {
         return site.updateStreamers(bundle, 0);
     }).then(function(bundle) {
+        let streamersToCap = [];
         if (bundle.dirty) {
             site.writeConfig();
         }
-    }).then(function() {
-        return site.getStreamersToCap();
+        if (tryingToExit) {
+            site.dbgMsg("Skipping lookup while exit in progress...");
+        } else {
+            streamersToCap = site.getStreamersToCap();
+        }
+        return streamersToCap;
     }).then(function(streamersToCap) {
-        return site.recordStreamers(streamersToCap, tryingToExit);
+        return site.recordStreamers(streamersToCap);
     }).catch(function(err) {
         site.errMsg(err);
     }).finally(function() {

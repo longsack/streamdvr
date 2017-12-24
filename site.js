@@ -9,20 +9,43 @@ const blessed      = require("blessed");
 
 class Site {
     constructor(siteName, config, siteDir, screen, logbody, inst, total) {
-        this.semaphore = 0;
+
+        // Sitename includes spaces to align log columns easily.
+        // Use .trim() as needed.
         this.siteName = siteName;
+
+        // Handle to the parsed config.yml
         this.config = config;
 
-        this.streamersToCap = [];
-        this.streamerState = new Map();
-        this.currentlyCapping = new Map();
+        // Custom site directory suffix
         this.siteDir = siteDir;
+
+        // Blessed UI elements
         this.screen = screen;
         this.logbody = logbody;
+
+        // Site instance number and site total number
         this.inst = inst;
         this.total = total;
+
+        // Counting semaphore to track outstanding post process ffmpeg jobs
+        this.semaphore = 0;
+
+        // Data accumulator for outstanding status lookup threads
+        // reset on each loop
+        this.streamersToCap = [];
+
+        // Used for intelligent printouts to avoid log spam
+        this.streamerState = new Map();
+
+        // Outstanding ffmpeg jobs
+        this.currentlyCapping = new Map();
+
+        // Data used to render the displayed lists
         this.streamerList = new Map();
 
+        // Calculate this site's screen layout based on its instance number
+        // and the total number of sites.
         let top;
         let left;
         let width;
@@ -50,6 +73,7 @@ class Site {
             height = "66%-1";
         }
 
+        // Insert ourselves into the UI
         this.title = blessed.box({
             top: top,
             left: left,
@@ -140,7 +164,7 @@ class Site {
 
         for (const capInfo of this.currentlyCapping.values()) {
             const stat = fs.statSync(this.config.captureDirectory + "/" + capInfo.filename + ".ts");
-            this.dbgMsg(colors.name(capInfo.nm) + " file size (" + capInfo.filename + ".ts), size=" + stat.size + ", maxByteSize=" + maxByteSize);
+            this.dbgMsg(colors.name(capInfo.nm) + " file size (" + capInfo.filename + ".ts), size=" +stat.size + ", maxByteSize=" + maxByteSize);
             if (stat.size >= maxByteSize) {
                 this.msg(colors.name(capInfo.nm) + " recording has exceeded file size limit (size=" + stat.size + " > maxByteSize=" + maxByteSize + ")");
                 capInfo.captureProcess.kill("SIGINT");
@@ -244,14 +268,9 @@ class Site {
         fs.writeFileSync("config.yml", yaml.safeDump(this.config), "utf8");
     }
 
-    setupCapture(streamer, tryingToExit) {
+    setupCapture(streamer) {
         if (this.currentlyCapping.has(streamer.uid)) {
             this.dbgMsg(colors.name(streamer.nm) + " is already capturing");
-            return false;
-        }
-
-        if (tryingToExit) {
-            this.dbgMsg(colors.name(streamer.nm) + " capture not starting due to ctrl+c");
             return false;
         }
 
@@ -424,7 +443,7 @@ class Site {
         const me = this;
 
         // TODO: Hack
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 300; i++) {
             me.list.deleteLine(0);
         }
 
