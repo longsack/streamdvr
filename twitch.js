@@ -20,6 +20,7 @@ class Twitch extends site.Site {
 
         let includeStreamers = [];
         let excludeStreamers = [];
+
         const updates = yaml.safeLoad(fs.readFileSync("updates.yml", "utf8"));
 
         if (!updates.includeTwitch) {
@@ -46,36 +47,18 @@ class Twitch extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    addStreamer(streamer) {
-        if (super.addStreamer(streamer, this.config.twitch)) {
-            this.config.twitch.push(streamer.uid);
-            return true;
-        }
-        return false;
-    }
-
-    addStreamers(bundle) {
-        for (let i = 0; i < bundle.includeStreamers.length; i++) {
-            bundle.dirty |= this.addStreamer({nm: bundle.includeStreamers[i], uid: bundle.includeStreamers[i]});
-        }
-        return bundle;
-    }
-
-    removeStreamer(streamer) {
-        this.config.twitch = _.without(this.config.twitch, streamer.uid);
-        return super.removeStreamer(streamer);
-    }
-
-    removeStreamers(bundle) {
-        for (let i = 0; i < bundle.excludeStreamers.length; i++) {
-            const nm = bundle.excludeStreamers[i];
-            const index = this.config.twitch.indexOf(nm);
-
-            if (index !== -1) {
-                bundle.dirty |= this.removeStreamer({nm: nm, uid: nm});
+    updateList(nm, add) {
+        let rc = false;
+        if (super.updateList({nm: nm, uid: nm}, this.config.twitch, add)) {
+            if (add) {
+                this.config.twitch.push(nm);
+                rc = true;
+            } else if (this.config.twitch.indexOf(nm) !== -1) {
+                this.config.twitch = _.without(this.config.twitch, nm);
+                rc = true;
             }
         }
-        return bundle.dirty;
+        return rc;
     }
 
     checkStreamerState(nm) {

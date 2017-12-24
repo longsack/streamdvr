@@ -16,6 +16,7 @@ class Cb extends site.Site {
     processUpdates() {
         const stats = fs.statSync("updates.yml");
         if (!stats.isFile()) {
+            this.dbgMsg("updates.yml does not exist");
             return {includeStreamers: [], excludeStreamers: [], dirty: false};
         }
 
@@ -48,36 +49,17 @@ class Cb extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    addStreamer(streamer) {
-        if (super.addStreamer(streamer, this.config.cb)) {
-            this.config.cb.push(streamer.uid);
-            return true;
-        }
-        return false;
-    }
-
-    addStreamers(bundle) {
-        for (let i = 0; i < bundle.includeStreamers.length; i++) {
-            bundle.dirty |= this.addStreamer({nm: bundle.includeStreamers[i], uid: bundle.includeStreamers[i]});
-        }
-        return bundle;
-    }
-
-    removeStreamer(streamer) {
-        this.config.cb = _.without(this.config.cb, streamer.uid);
-        return super.removeStreamer(streamer);
-    }
-
-    removeStreamers(bundle) {
-        for (let i = 0; i < bundle.excludeStreamers.length; i++) {
-            const nm = bundle.excludeStreamers[i];
-            const index = this.config.cb.indexOf(nm);
-
-            if (index !== -1) {
-                bundle.dirty |= this.removeStreamer({nm: nm, uid: nm});
+    updateList(nm, add) {
+        if (super.updateList({nm: nm, uid: nm}, this.config.cb, add)) {
+            if (add) {
+                this.config.cb.push(nm);
+                return true;
+            } else if (this.config.cb.indexOf(nm) !== -1) {
+                this.config.cb = _.without(this.config.cb, nm);
+                return true;
             }
         }
-        return bundle.dirty;
+        return false;
     }
 
     checkStreamerState(nm) {

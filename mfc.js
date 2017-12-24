@@ -67,57 +67,40 @@ class Mfc extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    addStreamer(streamer) {
-        if (super.addStreamer(streamer, this.config.mfc)) {
-            this.config.mfc.push(streamer.uid);
-            return true;
-        }
-        return false;
+    updateList(nm, add) {
+        const me = this;
+
+        // Fetch the UID. The streamer does not have to be online for this.
+        return this.queryUser(nm).then((streamer) => {
+            let rc = false;
+            if (typeof streamer !== "undefined") {
+                if (super.updateList(streamer, me.config.mfc, add)) {
+                    if (add) {
+                        me.config.mfc.push(streamer.uid);
+                        rc = true;
+                    } else if (this.config.cb.indexOf(nm) !== -1) {
+                        this.config.mfc = _.without(this.config.mfc, streamer.uid);
+                        rc = true;
+                    }
+                }
+            } else {
+                me.errMsg("Could not find " + colors.name(nm));
+            }
+            return rc;
+        });
     }
 
-    addStreamers(bundle) {
-        // Fetch the UID of new streamer to add to capture list.
-        // The streamer does not have to be online for this.
+    updateStreamers(bundle, add) {
         const queries = [];
+        const list = add ? bundle.includeStreamers : bundle.excludeStreamers;
 
-        for (let i = 0; i < bundle.includeStreamers.length; i++) {
-            this.dbgMsg("Checking if " + colors.name(bundle.includeStreamers[i]) + " exists.");
-            const query = this.queryUser(bundle.includeStreamers[i]).then((streamer) => {
-                if (typeof streamer !== "undefined") {
-                    bundle.dirty |= this.addStreamer(streamer);
-                } else {
-                    this.errMsg("Could not find streamer");
-                }
-            });
-            queries.push(query);
+        for (let i = 0; i < list.length; i++) {
+            this.dbgMsg("Checking if " + colors.name(list[i]) + " exists.");
+            queries.push(this.updateList(list[i], add));
         }
 
         return Promise.all(queries).then(function() {
             return bundle;
-        });
-    }
-
-    removeStreamer(streamer) {
-        this.config.mfc = _.without(this.config.mfc, streamer.uid);
-        return super.removeStreamer(streamer);
-    }
-
-    removeStreamers(bundle) {
-        // Fetch the UID of current streamer to be excluded from capture list.
-        // The streamer does not have to be online for this.
-        const queries = [];
-
-        for (let i = 0; i < bundle.excludeStreamers.length; i++) {
-            const query = this.queryUser(bundle.excludeStreamers[i]).then((streamer) => {
-                if (typeof streamer !== "undefined") {
-                    bundle.dirty |= this.removeStreamer(streamer);
-                }
-            });
-            queries.push(query);
-        }
-
-        return Promise.all(queries).then(function() {
-            return bundle.dirty;
         });
     }
 
