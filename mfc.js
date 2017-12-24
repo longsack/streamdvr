@@ -34,33 +34,34 @@ class Mfc extends site.Site {
 
     processUpdates() {
         const stats = fs.statSync("updates.yml");
+        if (!stats.isFile()) {
+            return {includeStreamers: [], excludeStreamers: [], dirty: false};
+        }
 
         let includeStreamers = [];
         let excludeStreamers = [];
 
-        if (stats.isFile()) {
-            const updates = yaml.safeLoad(fs.readFileSync("updates.yml", "utf8"));
+        const updates = yaml.safeLoad(fs.readFileSync("updates.yml", "utf8"));
 
-            if (!updates.includeMfc) {
-                updates.includeMfc = [];
-            } else if (updates.includeMfc.length > 0) {
-                this.msg(updates.includeMfc.length + " streamer(s) to include");
-                includeStreamers = updates.includeMfc;
-                updates.includeMfc = [];
-            }
+        if (!updates.includeMfc) {
+            updates.includeMfc = [];
+        } else if (updates.includeMfc.length > 0) {
+            this.msg(updates.includeMfc.length + " streamer(s) to include");
+            includeStreamers = updates.includeMfc;
+            updates.includeMfc = [];
+        }
 
-            if (!updates.excludeMfc) {
-                updates.excludeMfc = [];
-            } else if (updates.excludeMfc.length > 0) {
-                this.msg(updates.excludeMfc.length + " streamer(s) to exclude");
-                excludeStreamers = updates.excludeMfc;
-                updates.excludeMfc = [];
-            }
+        if (!updates.excludeMfc) {
+            updates.excludeMfc = [];
+        } else if (updates.excludeMfc.length > 0) {
+            this.msg(updates.excludeMfc.length + " streamer(s) to exclude");
+            excludeStreamers = updates.excludeMfc;
+            updates.excludeMfc = [];
+        }
 
-            // if there were some updates, then rewrite updates.yml
-            if (includeStreamers.length > 0 || excludeStreamers.length > 0) {
-                fs.writeFileSync("updates.yml", yaml.safeDump(updates), "utf8");
-            }
+        // if there were some updates, then rewrite updates.yml
+        if (includeStreamers.length > 0 || excludeStreamers.length > 0) {
+            fs.writeFileSync("updates.yml", yaml.safeDump(updates), "utf8");
         }
 
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
@@ -219,22 +220,23 @@ class Mfc extends site.Site {
     }
 
     recordStreamers(streamersToCap, tryingToExit) {
-        if (streamersToCap !== null && streamersToCap.length > 0) {
-            const caps = [];
-            const me = this;
-
-            this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
-            for (let i = 0; i < streamersToCap.length; i++) {
-                const cap = this.setupCapture(streamersToCap[i], tryingToExit).then(function(bundle) {
-                    if (bundle.spawnArgs !== "") {
-                        me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer, tryingToExit);
-                    }
-                });
-                caps.push(cap);
-            }
-            return Promise.all(caps);
+        if (streamersToCap === null || streamersToCap.length === 0) {
+            return null;
         }
-        return null;
+
+        const caps = [];
+        const me = this;
+
+        this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
+        for (let i = 0; i < streamersToCap.length; i++) {
+            const cap = this.setupCapture(streamersToCap[i], tryingToExit).then(function(bundle) {
+                if (bundle.spawnArgs !== "") {
+                    me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer, tryingToExit);
+                }
+            });
+            caps.push(cap);
+        }
+        return Promise.all(caps);
     }
 }
 
