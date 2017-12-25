@@ -237,6 +237,20 @@ class Site {
         return true;
     }
 
+    checkStreamerState(streamer, listitem, msg, isBroadcasting, isOffline, newState) {
+        this.streamerList.set(streamer.nm, listitem);
+        if ((this.streamerState.has(streamer.uid) || !isOffline) && newState !== this.streamerState.get(streamer.uid)) {
+            this.msg(msg);
+        }
+        this.streamerState.set(streamer.uid, newState);
+        if (this.currentlyCapping.has(streamer.uid) && isBroadcasting === 0) {
+            // Sometimes the ffmpeg process doesn't end when a streamer
+            // stops broadcasting, so terminate it.
+            this.dbgMsg(colors.name(streamer.nm) + " is no longer broadcasting, ending ffmpeg process.");
+            this.haltCapture(streamer.uid);
+        }
+    }
+
     addStreamerToCapList(streamer, filename, captureProcess) {
         this.currentlyCapping.set(streamer.uid, {nm: streamer.nm, filename: filename, captureProcess: captureProcess});
     }

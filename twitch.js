@@ -81,16 +81,8 @@ class Twitch extends site.Site {
             }
 
             this.streamerState.set(nm, listitem.streamerState);
-            this.streamerList.set(nm, listitem);
-            if ((!this.streamerState.has(nm) && listitem.streamerState !== "Offline") || (this.streamerState.has(nm) && listitem.streamerState !== this.streamerState.get(nm))) {
-                this.msg(msg);
-            }
-            this.streamerState.set(nm, listitem.streamerState);
+            super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, listitem.streamerState === "offline", listitem.streamerState);
 
-            if (this.currentlyCapping.has(nm) && isBroadcasting === 0) {
-                this.dbgMsg(colors.name(nm) + " is no longer broadcasting, ending ffmpeg process.");
-                this.haltCapture(nm);
-            }
             this.render();
             return true;
         }).catch((err) => {
