@@ -164,7 +164,7 @@ class Site {
 
         for (const capInfo of this.currentlyCapping.values()) {
             const stat = fs.statSync(this.config.captureDirectory + "/" + capInfo.filename + ".ts");
-            this.dbgMsg(colors.name(capInfo.nm) + " file size (" + capInfo.filename + ".ts), size=" +stat.size + ", maxByteSize=" + maxByteSize);
+            this.dbgMsg(colors.name(capInfo.nm) + " file size (" + capInfo.filename + ".ts), size=" + stat.size + ", maxByteSize=" + maxByteSize);
             if (stat.size >= maxByteSize) {
                 this.msg(colors.name(capInfo.nm) + " recording has exceeded file size limit (size=" + stat.size + " > maxByteSize=" + maxByteSize + ")");
                 capInfo.captureProcess.kill("SIGINT");

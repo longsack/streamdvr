@@ -49,7 +49,7 @@ class Twitch extends site.Site {
 
     updateList(nm, add) {
         let update = false;
-        if (this.super.updateList({nm: nm, uid: nm}, this.config.twitch, add)) {
+        if (super.updateList({nm: nm, uid: nm}, this.config.twitch, add)) {
             if (add) {
                 this.config.twitch.push(nm);
                 update = true;

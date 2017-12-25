@@ -89,12 +89,15 @@ class Mfc extends site.Site {
     }
 
     updateStreamers(bundle, add) {
+        const me = this;
         const queries = [];
         const list = add ? bundle.includeStreamers : bundle.excludeStreamers;
 
         for (let i = 0; i < list.length; i++) {
             this.dbgMsg("Checking if " + colors.name(list[i]) + " exists.");
-            queries.push(this.updateList(list[i], add));
+            queries.push(me.updateList(list[i], add).then((dirty) => {
+                bundle.dirty |= dirty;
+            }));
         }
 
         return Promise.all(queries).then(function() {

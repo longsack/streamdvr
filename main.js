@@ -79,6 +79,7 @@ function log(text) {
     console.log(text);
 }
 
+// Runtime UI adjustments
 function display(cmd, window) {
     switch (window) {
     case "list":
@@ -108,13 +109,12 @@ function display(cmd, window) {
     }
 }
 
+// Add and remove streamers
 function updateList(cmd, site, nm) {
     for (let i = 0; i < SITES.length; i++) {
         const siteName = SITES[i].siteName.trim().toLowerCase();
         if (site === siteName) {
-            const queries = [];
-            queries.push(SITES[i].updateList(nm, cmd === "add" ? 1 : 0));
-            Promise.all(queries).then(function(update) {
+            SITES[i].updateList(nm, cmd === "add" ? 1 : 0).then((update) => {
                 if (update) {
                     SITES[i].writeConfig();
                 }
@@ -123,6 +123,7 @@ function updateList(cmd, site, nm) {
     }
 }
 
+// CLI
 inputBar.on("submit", (text) => {
     inputBar.clearValue();
 
