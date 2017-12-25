@@ -61,9 +61,7 @@ class Cb extends site.Site {
             }
         }
 
-        return Promise.try(() => {
-            return update;
-        });
+        return Promise.try(() => update);
     }
 
     checkStreamerState(nm) {
@@ -71,9 +69,7 @@ class Cb extends site.Site {
         let msg = colors.name(nm);
         let isBroadcasting = 0;
 
-        return Promise.try(() => {
-            return fetch(url, {timeout: this.timeOut});
-        }).then((res) => res.json()).then((json) => {
+        return Promise.try(() => fetch(url, {timeout: this.timeOut})).then((res) => res.json()).then((json) => {
             const listitem = this.streamerList.get(nm);
 
             if (typeof json.status !== "undefined") {
@@ -153,17 +149,14 @@ class Cb extends site.Site {
             queries.push(this.checkStreamerState(value.nm));
         });
 
-        return Promise.all(queries).then(() => {
-            return this.streamersToCap;
-        });
+        return Promise.all(queries).then(() => this.streamersToCap);
     }
 
     setupCapture(streamer) {
 
         if (!super.setupCapture(streamer)) {
-            return Promise.try(() => {
-                return {spawnArgs: "", filename: "", streamer: ""};
-            });
+            const empty = {spawnArgs: "", filename: "", streamer: ""};
+            return Promise.try(() => empty);
         }
 
         return Promise.try(() => {

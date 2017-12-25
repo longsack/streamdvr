@@ -14,9 +14,7 @@ class Mfc extends site.Site {
     }
 
     connect() {
-        return Promise.try(() => {
-            return this.mfcGuest.connectAndWaitForModels();
-        }).catch((err) => {
+        return Promise.try(() => this.mfcGuest.connectAndWaitForModels()).catch((err) => {
             this.errMsg(err.toString());
             return err;
         });
@@ -97,16 +95,12 @@ class Mfc extends site.Site {
             }));
         }
 
-        return Promise.all(queries).then(() => {
-            return bundle;
-        });
+        return Promise.all(queries).then(() => bundle);
     }
 
     checkStreamerState(uid) {
 
-        return Promise.try(() => {
-            return this.mfcGuest.queryUser(uid);
-        }).then((streamer) => {
+        return Promise.try(() => this.mfcGuest.queryUser(uid)).then((streamer) => {
             if (typeof streamer !== "undefined") {
                 let isBroadcasting = 0;
                 let msg = colors.name(streamer.nm);
@@ -172,17 +166,14 @@ class Mfc extends site.Site {
             queries.push(this.checkStreamerState(this.config.mfc[i]));
         }
 
-        return Promise.all(queries).then(() => {
-            return this.streamersToCap;
-        });
+        return Promise.all(queries).then(() => this.streamersToCap);
     }
 
     setupCapture(streamer) {
 
         if (!super.setupCapture(streamer)) {
-            return Promise.try(() => {
-                return {spawnArgs: "", filename: "", streamer: ""};
-            });
+            const empty = {spawnArgs: "", filename: "", streamer: ""};
+            return Promise.try(() => empty);
         }
 
         return Promise.try(() => {
@@ -203,7 +194,6 @@ class Mfc extends site.Site {
         }
 
         const caps = [];
-        const me = this;
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {

@@ -31,7 +31,7 @@ console.log = function(msg) {
     logFile.write(util.format(msg) + "\n");
 };
 
-let total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
+const total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
 let inst = 1;
 
 const screen = blessed.screen();
@@ -159,13 +159,13 @@ function mainSiteLoop(site) {
 
     Promise.try(() => {
         site.checkFileSize(config.captureDirectory, config.maxByteSize);
-    }).then(() => {
-        return site.processUpdates();
-    }).then((bundle) => {
-        return site.updateStreamers(bundle, 1);
-    }).then((bundle) => {
-        return site.updateStreamers(bundle, 0);
-    }).then((bundle) => {
+    }).then(() =>
+        site.processUpdates()
+    ).then((bundle) =>
+        site.updateStreamers(bundle, 1)
+    ).then((bundle) =>
+        site.updateStreamers(bundle, 0)
+    ).then((bundle) => {
         let streamersToCap = [];
         if (bundle.dirty) {
             site.writeConfig();
@@ -176,9 +176,9 @@ function mainSiteLoop(site) {
             streamersToCap = site.getStreamersToCap();
         }
         return streamersToCap;
-    }).then((streamersToCap) => {
-        return site.recordStreamers(streamersToCap);
-    }).catch((err) => {
+    }).then((streamersToCap) =>
+        site.recordStreamers(streamersToCap)
+    ).catch((err) => {
         site.errMsg(err);
     }).finally(() => {
         site.dbgMsg("Done, waiting " + config.scanInterval + " seconds.");
@@ -277,9 +277,7 @@ if (config.enableMFC) {
     mfc = new MFC.Mfc(config, screen, logbody, inst, total);
     inst++;
     SITES.push(mfc);
-    Promise.try(() => {
-        return mfc.connect();
-    }).then(() => {
+    Promise.try(() => mfc.connect()).then(() => {
         mainSiteLoop(mfc);
     }).catch((err) => {
         mfc.errMsg(err);

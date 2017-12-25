@@ -59,17 +59,13 @@ class Twitch extends site.Site {
             }
         }
 
-        return Promise.try(() => {
-            return update;
-        });
+        return Promise.try(() => update);
     }
 
     checkStreamerState(nm) {
         const url = "https://api.twitch.tv/kraken/streams/" + nm + "?client_id=rznf9ecq10bbcwe91n6hhnul3dbpg9";
 
-        return Promise.try(() => {
-            return fetch(url);
-        }).then((res) => res.json()).then((json) => {
+        return Promise.try(() => fetch(url)).then((res) => res.json()).then((json) => {
             const listitem = this.streamerList.get(nm);
             let isBroadcasting = 0;
             let msg = colors.name(nm);
@@ -122,17 +118,14 @@ class Twitch extends site.Site {
             queries.push(this.checkStreamerState(value.nm));
         });
 
-        return Promise.all(queries).then(() => {
-            return this.streamersToCap;
-        });
+        return Promise.all(queries).then(() => this.streamersToCap);
     }
 
     setupCapture(streamer) {
 
         if (!super.setupCapture(streamer)) {
-            return Promise.try(() => {
-                return {spawnArgs: "", filename: "", streamer: ""};
-            });
+            const empty = {spawnArgs: "", filename: "", streamer: ""};
+            return Promise.try(() => empty);
         }
 
         return Promise.try(() => {

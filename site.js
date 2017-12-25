@@ -292,7 +292,6 @@ class Site {
     }
 
     startCapture(spawnArgs, filename, streamer) {
-        const me = this;
         const captureProcess = childProcess.spawn("ffmpeg", spawnArgs);
 
         const listitem = this.streamerList.get(streamer.nm);
