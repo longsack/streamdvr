@@ -250,7 +250,7 @@ class Site {
     }
 
     haltAllCaptures() {
-        this.currentlyCapping.forEach(function(value) {
+        this.currentlyCapping.forEach((value) => {
             value.captureProcess.kill("SIGINT");
         });
     }
@@ -291,7 +291,7 @@ class Site {
         return completeDir;
     }
 
-    startCapture(spawnArgs, filename, streamer, tryingToExit) {
+    startCapture(spawnArgs, filename, streamer) {
         const me = this;
         const captureProcess = childProcess.spawn("ffmpeg", spawnArgs);
 
@@ -299,42 +299,39 @@ class Site {
         listitem.filename = filename + ".ts";
         this.streamerList.set(streamer.nm, listitem);
 
-        captureProcess.on("close", function() {
-            if (tryingToExit) {
-                me.msg(colors.name(streamer.nm) + " capture interrupted");
-            }
+        captureProcess.on("close", () => {
 
-            if (me.streamerList.has(streamer.nm)) {
-                // When removing a capturing streamer, the streamerList
-                // entry gets removed before ffmpeg process ends.
-                const li = me.streamerList.get(streamer.nm);
+            // When removing a streamer, the streamerList entry gets removed
+            // before the ffmpeg process ends, so check if it exists.
+            if (this.streamerList.has(streamer.nm)) {
+                const li = this.streamerList.get(streamer.nm);
                 li.filename = "";
-                me.streamerList.set(streamer.nm, li);
+                this.streamerList.set(streamer.nm, li);
             }
 
-            me.removeStreamerFromCapList(streamer);
+            this.removeStreamerFromCapList(streamer);
 
-            fs.stat(me.config.captureDirectory + "/" + filename + ".ts", function(err, stats) {
+            fs.stat(this.config.captureDirectory + "/" + filename + ".ts", (err, stats) => {
                 if (err) {
                     if (err.code === "ENOENT") {
-                        me.errMsg(colors.name(streamer.nm) + ", " + filename + ".ts not found in capturing directory, cannot convert to " + me.config.autoConvertType);
+                        this.errMsg(colors.name(streamer.nm) + ", " + filename + ".ts not found in capturing directory, cannot convert to " + this.config.autoConvertType);
                     } else {
-                        me.errMsg(colors.name(streamer.nm) + ": " + err.toString());
+                        this.errMsg(colors.name(streamer.nm) + ": " + err.toString());
                     }
-                } else if (stats.size <= me.config.minByteSize) {
-                    me.msg(colors.name(streamer.nm) + " recording automatically deleted (size=" + stats.size + " < minSizeBytes=" + me.config.minByteSize + ")");
-                    fs.unlinkSync(me.config.captureDirectory + "/" + filename + ".ts");
+                } else if (stats.size <= this.config.minByteSize) {
+                    this.msg(colors.name(streamer.nm) + " recording automatically deleted (size=" + stats.size + " < minSizeBytes=" + this.config.minByteSize + ")");
+                    fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
                 } else {
-                    me.postProcess(filename, streamer);
+                    this.postProcess(filename, streamer);
                 }
             });
 
             // Refresh streamer status since streamer has likely changed state
-            if (me.streamerList.has(streamer.nm)) {
+            if (this.streamerList.has(streamer.nm)) {
                 const queries = [];
-                queries.push(me.checkStreamerState(streamer.uid));
-                Promise.all(queries).then(function() {
-                    me.render();
+                queries.push(this.checkStreamerState(streamer.uid));
+                Promise.all(queries).then(() => {
+                    this.render();
                 });
             }
 
@@ -348,15 +345,14 @@ class Site {
     }
 
     postProcess(filename, streamer) {
-        const me = this;
         const completeDir = this.getCompleteDir(streamer);
         let mySpawnArguments;
 
         if (this.config.autoConvertType !== "mp4" && this.config.autoConvertType !== "mkv") {
             this.dbgMsg(colors.name(streamer.nm) + " recording moved (" + this.config.captureDirectory + "/" + filename + ".ts to " + completeDir + "/" + filename + ".ts)");
-            mv(this.config.captureDirectory + "/" + filename + ".ts", completeDir + "/" + filename + ".ts", function(err) {
+            mv(this.config.captureDirectory + "/" + filename + ".ts", completeDir + "/" + filename + ".ts", (err) => {
                 if (err) {
-                    me.errMsg(colors.site(filename) + ": " + err.toString());
+                    this.errMsg(colors.site(filename) + ": " + err.toString());
                 }
             });
             return;
@@ -402,22 +398,22 @@ class Site {
             this.render();
         }
 
-        myCompleteProcess.on("close", function() {
-            if (!me.config.keepTsFile) {
-                fs.unlinkSync(me.config.captureDirectory + "/" + filename + ".ts");
+        myCompleteProcess.on("close", () => {
+            if (!this.config.keepTsFile) {
+                fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
             }
-            me.msg(colors.name(streamer.nm) + " done converting " + filename + "." + me.config.autoConvertType);
-            if (me.streamerList.has(streamer.nm)) {
-                const li = me.streamerList.get(streamer.nm);
+            this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
+            if (this.streamerList.has(streamer.nm)) {
+                const li = this.streamerList.get(streamer.nm);
                 li.filename = "";
-                me.streamerList.set(streamer.nm, li);
-                me.render();
+                this.streamerList.set(streamer.nm, li);
+                this.render();
             }
-            me.semaphore--; // release semaphore only when ffmpeg process has ended
+            this.semaphore--; // release semaphore only when ffmpeg process has ended
         });
 
-        myCompleteProcess.on("error", function(err) {
-            me.errMsg(err);
+        myCompleteProcess.on("error", (err) => {
+            this.errMsg(err);
         });
     }
 
@@ -440,11 +436,9 @@ class Site {
     }
 
     render() {
-        const me = this;
-
         // TODO: Hack
         for (let i = 0; i < 300; i++) {
-            me.list.deleteLine(0);
+            this.list.deleteLine(0);
         }
 
         const sortedKeys = Array.from(this.streamerList.keys()).sort();

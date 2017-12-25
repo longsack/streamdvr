@@ -157,15 +157,15 @@ function sleep(time) {
 
 function mainSiteLoop(site) {
 
-    Promise.try(function() {
+    Promise.try(() => {
         site.checkFileSize(config.captureDirectory, config.maxByteSize);
-    }).then(function() {
+    }).then(() => {
         return site.processUpdates();
-    }).then(function(bundle) {
+    }).then((bundle) => {
         return site.updateStreamers(bundle, 1);
-    }).then(function(bundle) {
+    }).then((bundle) => {
         return site.updateStreamers(bundle, 0);
-    }).then(function(bundle) {
+    }).then((bundle) => {
         let streamersToCap = [];
         if (bundle.dirty) {
             site.writeConfig();
@@ -176,13 +176,13 @@ function mainSiteLoop(site) {
             streamersToCap = site.getStreamersToCap();
         }
         return streamersToCap;
-    }).then(function(streamersToCap) {
+    }).then((streamersToCap) => {
         return site.recordStreamers(streamersToCap);
-    }).catch(function(err) {
+    }).catch((err) => {
         site.errMsg(err);
-    }).finally(function() {
+    }).finally(() => {
         site.dbgMsg("Done, waiting " + config.scanInterval + " seconds.");
-        setTimeout(function() { mainSiteLoop(site); }, config.scanInterval * 1000);
+        setTimeout(() => { mainSiteLoop(site); }, config.scanInterval * 1000);
     });
 }
 
@@ -241,21 +241,21 @@ screen.key(["q", "C-c"], () => (
     exit()
 ));
 
-process.on("SIGINT", function() {
+process.on("SIGINT", () => {
     exit();
 });
 
 config.captureDirectory  = path.resolve(config.captureDirectory);
 config.completeDirectory = path.resolve(config.completeDirectory);
 
-mkdirp(config.captureDirectory, function(err) {
+mkdirp(config.captureDirectory, (err) => {
     if (err) {
         log(err.toString());
         process.exit(1);
     }
 });
 
-mkdirp(config.completeDirectory, function(err) {
+mkdirp(config.completeDirectory, (err) => {
     if (err) {
         log(err.toString());
         process.exit(1);
@@ -277,11 +277,11 @@ if (config.enableMFC) {
     mfc = new MFC.Mfc(config, screen, logbody, inst, total);
     inst++;
     SITES.push(mfc);
-    Promise.try(function() {
+    Promise.try(() => {
         return mfc.connect();
-    }).then(function() {
+    }).then(() => {
         mainSiteLoop(mfc);
-    }).catch(function(err) {
+    }).catch((err) => {
         mfc.errMsg(err);
         return err;
     });
@@ -312,9 +312,9 @@ if (!config.logshown) {
 screen.append(logbody);
 screen.append(inputBar);
 
+// Have to render screen once before printouts work
 screen.render();
 
-// Have to render screen once before printouts work
 if (config.enableMFC) {
     mfc.msg(config.mfc.length + " streamer(s) in config");
 }

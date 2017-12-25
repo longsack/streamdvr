@@ -59,19 +59,18 @@ class Twitch extends site.Site {
             }
         }
 
-        return Promise.try(function() {
+        return Promise.try(() => {
             return update;
         });
     }
 
     checkStreamerState(nm) {
         const url = "https://api.twitch.tv/kraken/streams/" + nm + "?client_id=rznf9ecq10bbcwe91n6hhnul3dbpg9";
-        const me = this;
 
-        return Promise.try(function() {
+        return Promise.try(() => {
             return fetch(url);
-        }).then((res) => res.json()).then(function(json) {
-            const listitem = me.streamerList.get(nm);
+        }).then((res) => res.json()).then((json) => {
+            const listitem = this.streamerList.get(nm);
             let isBroadcasting = 0;
             let msg = colors.name(nm);
 
@@ -80,35 +79,33 @@ class Twitch extends site.Site {
                 listitem.streamerState = "Offline";
             } else {
                 msg += " is live streaming";
-                me.streamersToCap.push({uid: nm, nm: nm});
+                this.streamersToCap.push({uid: nm, nm: nm});
                 isBroadcasting = 1;
                 listitem.streamerState = "Streaming";
             }
 
-            me.streamerState.set(nm, listitem.streamerState);
-            me.streamerList.set(nm, listitem);
-            if ((!me.streamerState.has(nm) && listitem.streamerState !== "Offline") || (me.streamerState.has(nm) && listitem.streamerState !== me.streamerState.get(nm))) {
-                me.msg(msg);
+            this.streamerState.set(nm, listitem.streamerState);
+            this.streamerList.set(nm, listitem);
+            if ((!this.streamerState.has(nm) && listitem.streamerState !== "Offline") || (this.streamerState.has(nm) && listitem.streamerState !== this.streamerState.get(nm))) {
+                this.msg(msg);
             }
-            me.streamerState.set(nm, listitem.streamerState);
+            this.streamerState.set(nm, listitem.streamerState);
 
-            if (me.currentlyCapping.has(nm) && isBroadcasting === 0) {
-                me.dbgMsg(colors.name(nm) + " is no longer broadcasting, ending ffmpeg process.");
-                me.haltCapture(nm);
+            if (this.currentlyCapping.has(nm) && isBroadcasting === 0) {
+                this.dbgMsg(colors.name(nm) + " is no longer broadcasting, ending ffmpeg process.");
+                this.haltCapture(nm);
             }
-            me.render();
+            this.render();
             return true;
-        }).catch(function(err) {
-            me.errMsg("Unknown streamer " + colors.name(nm) + ", check the spelling.");
-            me.streamerList.delete(nm);
-            me.render();
+        }).catch((err) => {
+            this.errMsg("Unknown streamer " + colors.name(nm) + ", check the spelling.");
+            this.streamerList.delete(nm);
+            this.render();
             return err;
         });
     }
 
     getStreamersToCap() {
-        const me = this;
-
         this.streamersToCap = [];
 
         // TODO: This should be somewhere else
@@ -121,32 +118,31 @@ class Twitch extends site.Site {
 
         const queries = [];
 
-        me.streamerList.forEach(function(value) {
-            queries.push(me.checkStreamerState(value.nm));
+        this.streamerList.forEach((value) => {
+            queries.push(this.checkStreamerState(value.nm));
         });
 
-        return Promise.all(queries).then(function() {
-            return me.streamersToCap;
+        return Promise.all(queries).then(() => {
+            return this.streamersToCap;
         });
     }
 
     setupCapture(streamer) {
-        const me = this;
 
         if (!super.setupCapture(streamer)) {
-            return Promise.try(function() {
+            return Promise.try(() => {
                 return {spawnArgs: "", filename: "", streamer: ""};
             });
         }
 
-        return Promise.try(function() {
-            const filename = me.getFileName(streamer.nm);
+        return Promise.try(() => {
+            const filename = this.getFileName(streamer.nm);
             let url = childProcess.execSync("youtube-dl -g https://twitch.tv/" + streamer.nm);
 
             url = url.toString();
             url = url.replace(/\r?\n|\r/g, "");
 
-            const spawnArgs = me.getCaptureArguments(url, filename);
+            const spawnArgs = this.getCaptureArguments(url, filename);
 
             return {spawnArgs: spawnArgs, filename: filename, streamer: streamer};
         });
@@ -158,13 +154,12 @@ class Twitch extends site.Site {
         }
 
         const caps = [];
-        const me = this;
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i]).then(function(bundle) {
+            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
-                    me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
+                    this.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
                 }
             });
             caps.push(cap);
