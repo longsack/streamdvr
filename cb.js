@@ -54,28 +54,27 @@ class Cb extends site.Site {
     }
 
     updateList(nm, add) {
+        let update = false;
         if (super.updateList({nm: nm, uid: nm}, this.config.cb, add)) {
             if (add) {
                 this.config.cb.push(nm);
-                return true;
+                update = true;
             } else if (this.config.cb.indexOf(nm) !== -1) {
                 this.config.cb = _.without(this.config.cb, nm);
-                return true;
+                update = true;
             }
         }
-        return false;
+
+        return Promise.try(() => update);
     }
 
     checkStreamerState(nm) {
         const url = "https://chaturbate.com/api/chatvideocontext/" + nm;
-        const me = this;
         let msg = colors.name(nm);
         let isBroadcasting = 0;
 
-        return Promise.try(function() {
-            return fetch(url, {timeout: me.timeOut});
-        }).then((res) => res.json()).then(function(json) {
-            const listitem = me.streamerList.get(nm);
+        return Promise.try(() => fetch(url, {timeout: this.timeOut})).then((res) => res.json()).then((json) => {
+            const listitem = this.streamerList.get(nm);
 
             if (typeof json.status !== "undefined") {
                 if (json.detail === "This room requires a password.") {
@@ -85,16 +84,16 @@ class Cb extends site.Site {
                 } else {
                     listitem.streamerState = "Access Denied";
                 }
-                me.streamerState.set(nm, listitem.streamerState);
-                me.streamerList.set(nm, listitem);
+                this.streamerState.set(nm, listitem.streamerState);
+                this.streamerList.set(nm, listitem);
                 msg += ", " + json.detail;
-                me.dbgMsg(msg);
+                this.dbgMsg(msg);
             } else {
                 const currState = json.room_status;
-                me.cbData.set(nm, json);
+                this.cbData.set(nm, json);
                 if (currState === "public") {
                     msg += " is in public chat!";
-                    me.streamersToCap.push({uid: nm, nm: nm});
+                    this.streamersToCap.push({uid: nm, nm: nm});
                     isBroadcasting = 1;
                     listitem.streamerState = "Public Chat";
                 } else if (currState === "private") {
@@ -116,23 +115,23 @@ class Cb extends site.Site {
                     msg += " has unknown state: " + currState;
                     listitem.streamerState = currState;
                 }
-                me.streamerList.set(nm, listitem);
-                if ((!me.streamerState.has(nm) && currState !== "offline") || (me.streamerState.has(nm) && currState !== me.streamerState.get(nm))) {
-                    me.msg(msg);
+                this.streamerList.set(nm, listitem);
+                if ((!this.streamerState.has(nm) && currState !== "offline") || (this.streamerState.has(nm) && currState !== this.streamerState.get(nm))) {
+                    this.msg(msg);
                 }
-                me.streamerState.set(nm, currState);
+                this.streamerState.set(nm, currState);
 
-                if (me.currentlyCapping.has(nm) && isBroadcasting === 0) {
-                    me.dbgMsg(colors.name(nm) + " is no longer broadcasting, ending ffmpeg process.");
-                    me.haltCapture(nm);
+                if (this.currentlyCapping.has(nm) && isBroadcasting === 0) {
+                    this.dbgMsg(colors.name(nm) + " is no longer broadcasting, ending ffmpeg process.");
+                    this.haltCapture(nm);
                 }
             }
-            me.render();
+            this.render();
             return true;
-        }).catch(function(err) {
-            me.errMsg("Unknown streamer " + colors.name(nm) + ", check the spelling.");
-            me.streamerList.delete(nm);
-            me.render();
+        }).catch((err) => {
+            this.errMsg("Unknown streamer " + colors.name(nm) + ", check the spelling.");
+            this.streamerList.delete(nm);
+            this.render();
             return err;
         });
     }
@@ -153,8 +152,6 @@ class Cb extends site.Site {
     }
 
     getStreamersToCap() {
-        const me = this;
-
         this.streamersToCap = [];
 
         // TODO: This should be somewhere else
@@ -189,49 +186,44 @@ class Cb extends site.Site {
 
         const funcs = serRuns.map((batch) => () => this.checkStreamersState(batch));
 
-        return promiseSerial(funcs).then(function() {
-            return me.streamersToCap;
-        }).catch(function(err) {
-            me.errMsg(err.toString());
+        return promiseSerial(funcs).then(() => this.streamersToCap).catch((err) => {
+            this.errMsg(err.toString());
         });
     }
 
-    setupCapture(streamer, tryingToExit) {
-        const me = this;
+    setupCapture(streamer) {
 
-        if (!super.setupCapture(streamer, tryingToExit)) {
-            return Promise.try(function() {
-                return {spawnArgs: "", filename: "", streamer: ""};
-            });
+        if (!super.setupCapture(streamer)) {
+            const empty = {spawnArgs: "", filename: "", streamer: ""};
+            return Promise.try(() => empty);
         }
 
-        return Promise.try(function() {
-            const filename = me.getFileName(streamer.nm);
-            const data = me.cbData.get(streamer.nm);
+        return Promise.try(() => {
+            const filename = this.getFileName(streamer.nm);
+            const data = this.cbData.get(streamer.nm);
             const url = data.hls_source;
-            let spawnArgs = me.getCaptureArguments(url, filename);
+            let spawnArgs = this.getCaptureArguments(url, filename);
 
             if (url === "") {
-                me.msg(colors.name(streamer.nm) + " is not actually online, CB is not updating properly.");
+                this.msg(colors.name(streamer.nm) + " is not actually online, CB is not updating properly.");
                 spawnArgs = "";
             }
             return {spawnArgs: spawnArgs, filename: filename, streamer: streamer};
         });
     }
 
-    recordStreamers(streamersToCap, tryingToExit) {
+    recordStreamers(streamersToCap) {
         if (streamersToCap === null || streamersToCap.length === 0) {
             return null;
         }
 
         const caps = [];
-        const me = this;
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i], tryingToExit).then(function(bundle) {
+            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
-                    me.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer, tryingToExit);
+                    this.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
                 }
             });
             caps.push(cap);
