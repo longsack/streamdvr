@@ -31,17 +31,8 @@ console.log = function(msg) {
     logFile.write(util.format(msg) + "\n");
 };
 
-let total = 0;
+let total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
 let inst = 1;
-if (config.enableMFC) {
-    total++;
-}
-if (config.enableCB) {
-    total++;
-}
-if (config.enableTwitch) {
-    total++;
-}
 
 const screen = blessed.screen();
 const logbody = blessed.box({
