@@ -235,6 +235,40 @@ function exit() {
     }
 }
 
+screen.key("1", () => {
+    if (SITES.length > 0) {
+        SITES[0].list.focus();
+    }
+});
+
+screen.key("2", () => {
+    if (SITES.length > 1) {
+        SITES[1].list.focus();
+    }
+});
+
+screen.key("3", () => {
+    if (SITES.length > 2) {
+        SITES[2].list.focus();
+    }
+});
+
+screen.key("4", () => {
+    if (SITES.length > 3) {
+        SITES[3].list.focus();
+    }
+});
+
+screen.key("pageup", () => {
+    logbody.scroll(-logbody.height || -1);
+    screen.render();
+});
+
+screen.key("pagedown", () => {
+    logbody.scroll(logbody.height || 1);
+    screen.render();
+});
+
 screen.key("enter", () => {
     inputBar.focus();
 });
