@@ -55,7 +55,7 @@ class Cb extends site.Site {
 
     updateList(nm, add, isTemp) {
         let update = false;
-        if (super.updateList({nm: nm, uid: nm}, isTemp ? this.temp : this.config.mfc, add, isTemp)) {
+        if (super.updateList({nm: nm, uid: nm}, isTemp ? this.temp : this.config.cb, add, isTemp)) {
             if (add) {
                 this.config.cb.push(nm);
                 update = true;

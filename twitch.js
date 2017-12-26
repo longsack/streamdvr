@@ -104,7 +104,7 @@ class Twitch extends site.Site {
         }
         for (let i = 0; i < this.temp.length; i++) {
             if (!this.streamerList.has(this.temp[i])) {
-                this.streamerList.set(this.temp[i], {uid: this.config.cb[i], nm: this.config.cb[i], streamerState: "Offline", filename: ""});
+                this.streamerList.set(this.temp[i], {uid: this.config.twitch[i], nm: this.config.twitch[i], streamerState: "Offline", filename: ""});
             }
         }
         this.render();
