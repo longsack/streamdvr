@@ -181,25 +181,6 @@ class Mfc extends site.Site {
             return err;
         });
     }
-
-    recordStreamers(streamersToCap) {
-        if (streamersToCap === null || streamersToCap.length === 0) {
-            return null;
-        }
-
-        const caps = [];
-
-        this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
-        for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
-                if (bundle.spawnArgs !== "") {
-                    this.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
-                }
-            });
-            caps.push(cap);
-        }
-        return Promise.all(caps);
-    }
 }
 
 exports.Mfc = Mfc;
