@@ -1,5 +1,6 @@
 const yaml         = require("js-yaml");
 const mkdirp       = require("mkdirp");
+const _            = require("underscore");
 const fs           = require("fs");
 const mv           = require("mv");
 const moment       = require("moment");
@@ -34,6 +35,9 @@ class Site {
         // Data accumulator for outstanding status lookup threads
         // reset on each loop
         this.streamersToCap = [];
+
+        // Storage for streamers temporarily added to capture list
+        this.temp = [];
 
         // Used for intelligent printouts to avoid log spam
         this.streamerState = new Map();
@@ -191,12 +195,17 @@ class Site {
         ];
     }
 
-    updateList(streamer, list, add) {
+    updateList(streamer, list, add, isTemp) {
         let rc;
         if (add) {
-            rc = this.addStreamer(streamer, list);
+            rc = this.addStreamer(streamer, list, isTemp);
+            if (isTemp) {
+                this.temp.push(streamer.uid);
+                rc = false;
+            }
         } else {
             rc = this.removeStreamer(streamer, list);
+            this.temp = _.without(this.temp, streamer.uid);
         }
         return rc;
     }
@@ -205,17 +214,17 @@ class Site {
         const list = add ? bundle.includeStreamers : bundle.excludeStreamers;
 
         for (let i = 0; i < list.length; i++) {
-            bundle.dirty |= this.updateList(list[i], add);
+            bundle.dirty |= this.updateList(list[i], add, false);
         }
 
         return bundle;
     }
 
-    addStreamer(streamer, list) {
+    addStreamer(streamer, list, isTemp) {
         const index = list.indexOf(streamer.uid);
         let rc = false;
         if (index === -1) {
-            this.msg(colors.name(streamer.nm) + " added to capture list");
+            this.msg(colors.name(streamer.nm) + " added to capture list" + (isTemp ? " (temporarily)" : ""));
             rc = true;
         } else {
             this.msg(colors.name(streamer.nm) + " is already in the capture list");

@@ -101,11 +101,12 @@ function display(cmd, window) {
 }
 
 // Add and remove streamers
-function updateList(cmd, site, nm) {
+function updateList(cmd, site, nm, isTemp) {
     for (let i = 0; i < SITES.length; i++) {
         const siteName = SITES[i].siteName.trim().toLowerCase();
         if (site === siteName) {
-            SITES[i].updateList(nm, cmd === "add" ? 1 : 0).then((update) => {
+            const isAdd = cmd === "add" || cmd === "addtemp";
+            SITES[i].updateList(nm, isAdd, isTemp).then((update) => {
                 if (update) {
                     SITES[i].writeConfig();
                 }
@@ -126,9 +127,10 @@ inputBar.on("submit", (text) => {
 
     switch (tokens[0]) {
     case "add":
+    case "addtemp":
     case "remove":
         if (tokens.length >= 3) {
-            updateList(tokens[0], tokens[1], tokens[2]);
+            updateList(tokens[0], tokens[1], tokens[2], tokens[0] === "addtemp");
         }
         break;
 

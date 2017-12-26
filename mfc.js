@@ -10,7 +10,7 @@ class Mfc extends site.Site {
     constructor(config, screen, logbody, inst, total) {
         super("MFC   ", config, "_mfc", screen, logbody, inst, total);
         mfc.setLogLevel(0);
-        this.mfcGuest = new mfc.Client("guest", "guest", {useWebSockets: false, camYou: false});
+        this.mfcGuest = new mfc.Client("guest", "guest", {useWebSockets: config.mfcWebsocket, camYou: false});
     }
 
     connect() {
@@ -63,12 +63,12 @@ class Mfc extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    updateList(nm, add) {
+    updateList(nm, add, isTemp) {
         // Fetch the UID. The streamer does not have to be online for this.
         return this.queryUser(nm).then((streamer) => {
             let update = false;
             if (typeof streamer !== "undefined") {
-                if (super.updateList(streamer, this.config.mfc, add)) {
+                if (super.updateList(streamer, isTemp ? this.temp : this.config.mfc, add, isTemp)) {
                     if (add) {
                         this.config.mfc.push(streamer.uid);
                         update = true;
@@ -90,7 +90,7 @@ class Mfc extends site.Site {
 
         for (let i = 0; i < list.length; i++) {
             this.dbgMsg("Checking if " + colors.name(list[i]) + " exists.");
-            queries.push(this.updateList(list[i], add).then((dirty) => {
+            queries.push(this.updateList(list[i], add, false).then((dirty) => {
                 bundle.dirty |= dirty;
             }));
         }
@@ -158,6 +158,14 @@ class Mfc extends site.Site {
 
         for (let i = 0; i < this.config.mfc.length; i++) {
             queries.push(this.checkStreamerState(this.config.mfc[i]));
+        }
+
+        // Only add a streamer from temp list if they are not
+        // in the primary list.  Prevents duplicate recording.
+        for (let i = 0; i < this.temp.length; i++) {
+            if (!_.constains(this.config.mfc, this.temp[i])) {
+                queries.push(this.checkStreamerState(this.temp[i]));
+            }
         }
 
         return Promise.all(queries).then(() => this.streamersToCap);

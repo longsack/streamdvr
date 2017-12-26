@@ -53,9 +53,9 @@ class Cb extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    updateList(nm, add) {
+    updateList(nm, add, isTemp) {
         let update = false;
-        if (super.updateList({nm: nm, uid: nm}, this.config.cb, add)) {
+        if (super.updateList({nm: nm, uid: nm}, isTemp ? this.temp : this.config.mfc, add, isTemp)) {
             if (add) {
                 this.config.cb.push(nm);
                 update = true;
@@ -151,6 +151,12 @@ class Cb extends site.Site {
                 this.streamerList.set(this.config.cb[i], {uid: this.config.cb[i], nm: this.config.cb[i], streamerState: "Offline", filename: ""});
             }
         }
+        for (let i = 0; i < this.temp.length; i++) {
+            if (!this.streamerList.has(this.temp[i])) {
+                this.streamerList.set(this.temp[i], {uid: this.config.cb[i], nm: this.config.cb[i], streamerState: "Offline", filename: ""});
+            }
+        }
+
         this.render();
 
         const nms = [];

@@ -47,9 +47,9 @@ class Twitch extends site.Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-    updateList(nm, add) {
+    updateList(nm, add, isTemp) {
         let update = false;
-        if (super.updateList({nm: nm, uid: nm}, this.config.twitch, add)) {
+        if (super.updateList({nm: nm, uid: nm}, isTemp ? this.temp : this.config.twitch, add, isTemp)) {
             if (add) {
                 this.config.twitch.push(nm);
                 update = true;
@@ -100,6 +100,11 @@ class Twitch extends site.Site {
         for (let i = 0; i < this.config.twitch.length; i++) {
             if (!this.streamerList.has(this.config.twitch[i])) {
                 this.streamerList.set(this.config.twitch[i], {uid: this.config.twitch[i], nm: this.config.twitch[i], streamerState: "Offline", filename: ""});
+            }
+        }
+        for (let i = 0; i < this.temp.length; i++) {
+            if (!this.streamerList.has(this.temp[i])) {
+                this.streamerList.set(this.temp[i], {uid: this.config.cb[i], nm: this.config.cb[i], streamerState: "Offline", filename: ""});
             }
         }
         this.render();
