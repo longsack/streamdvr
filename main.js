@@ -236,12 +236,12 @@ function exit() {
 }
 
 screen.key("pageup", () => {
-    screen.focused.scroll(-logbody.height || -1);
+    screen.focused.scroll(-screen.focused.height || -1);
     screen.render();
 });
 
 screen.key("pagedown", () => {
-    screen.focused.scroll(logbody.height || 1);
+    screen.focused.scroll(screen.focused.height || 1);
     screen.render();
 });
 
