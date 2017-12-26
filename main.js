@@ -235,30 +235,6 @@ function exit() {
     }
 }
 
-screen.key("1", () => {
-    if (SITES.length > 0) {
-        SITES[0].list.focus();
-    }
-});
-
-screen.key("2", () => {
-    if (SITES.length > 1) {
-        SITES[1].list.focus();
-    }
-});
-
-screen.key("3", () => {
-    if (SITES.length > 2) {
-        SITES[2].list.focus();
-    }
-});
-
-screen.key("4", () => {
-    if (SITES.length > 3) {
-        SITES[3].list.focus();
-    }
-});
-
 screen.key("pageup", () => {
     logbody.scroll(-logbody.height || -1);
     screen.render();
@@ -335,6 +311,13 @@ if (config.enableTwitch) {
     inst++;
     SITES.push(twitch);
     mainSiteLoop(twitch);
+}
+
+const hotkeys = ["1", "2", "3", "4"];
+for (let i = 0; i < hotkeys.length && i < SITES.length; i++) {
+    screen.key(hotkeys[i], () => {
+        SITES[i].list.focus();
+    });
 }
 
 if (!config.listshown) {
