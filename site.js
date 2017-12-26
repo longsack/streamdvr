@@ -355,8 +355,9 @@ class Site {
     }
 
     writeConfig() {
-        this.dbgMsg("Rewriting config.yml");
-        fs.writeFileSync("config.yml", yaml.safeDump(this.config), "utf8");
+        const filename = this.listName + ".yml";
+        this.dbgMsg("Rewriting " + filename);
+        fs.writeFileSync(filename, yaml.safeDump(this.listConfig), "utf8");
     }
 
     setupCapture(streamer) {
