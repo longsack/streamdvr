@@ -115,14 +115,6 @@ class Mfc extends site.Site {
             }
         }
 
-        // Only add a streamer from temp list if they are not
-        // in the primary list.  Prevents duplicate recording.
-        for (let i = 0; i < this.temp.length; i++) {
-            if (!_.constains(this.config.mfc, this.temp[i])) {
-                queries.push(this.checkStreamerState(this.temp[i]));
-            }
-        }
-
         return Promise.all(queries).then(() => this.streamersToCap);
     }
 
