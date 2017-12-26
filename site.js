@@ -1,7 +1,7 @@
 const yaml         = require("js-yaml");
 const mkdirp       = require("mkdirp");
-const _            = require("underscore");
 const fs           = require("fs");
+const _            = require("underscore");
 const mv           = require("mv");
 const moment       = require("moment");
 const colors       = require("colors/safe");
@@ -14,9 +14,13 @@ class Site {
         // Sitename includes spaces to align log columns easily.
         // Use .trim() as needed.
         this.siteName = siteName;
+        this.listName = siteName.trim().toLowerCase();
 
-        // Handle to the parsed config.yml
+        // Handle to the cross-site config.yml
         this.config = config;
+
+        // sitename.yml
+        this.listConfig = yaml.safeLoad(fs.readFileSync(this.listName + ".yml", "utf8"));
 
         // Custom site directory suffix
         this.siteDir = siteDir;
@@ -36,8 +40,8 @@ class Site {
         // reset on each loop
         this.streamersToCap = [];
 
-        // Storage for streamers temporarily added to capture list
-        this.temp = [];
+        // Streamers that are being temporarily captured for this session only
+        this.tempList = [];
 
         // Used for intelligent printouts to avoid log spam
         this.streamerState = new Map();
@@ -154,7 +158,7 @@ class Site {
         let filename = nm + "_";
 
         if (this.config.includeSiteInFile) {
-            filename += this.siteName.trim().toLowerCase() + "_";
+            filename += this.listName + "_";
         }
         filename += this.getDateTime();
         return filename;
@@ -195,19 +199,64 @@ class Site {
         ];
     }
 
-    updateList(streamer, list, add, isTemp) {
-        let rc;
-        if (add) {
-            rc = this.addStreamer(streamer, list, isTemp);
-            if (isTemp) {
-                this.temp.push(streamer.uid);
-                rc = false;
-            }
-        } else {
-            rc = this.removeStreamer(streamer, list);
-            this.temp = _.without(this.temp, streamer.uid);
+    processUpdates() {
+        const filename = this.listName + "_updates.yml";
+        const stats = fs.statSync(filename);
+        if (!stats.isFile()) {
+            this.dbgMsg(filename + " does not exist");
+            return {includeStreamers: [], excludeStreamers: [], dirty: false};
         }
-        return rc;
+
+        let includeStreamers = [];
+        let excludeStreamers = [];
+
+        const updates = yaml.safeLoad(fs.readFileSync(filename, "utf8"));
+
+        if (!updates.include) {
+            updates.include = [];
+        } else if (updates.include.length > 0) {
+            this.msg(updates.include.length + " streamer(s) to include");
+            includeStreamers = updates.include;
+            updates.include = [];
+        }
+
+        if (!updates.exclude) {
+            updates.exclude = [];
+        } else if (updates.exclude.length > 0) {
+            this.msg(updates.exclude.length + " streamer(s) to exclude");
+            excludeStreamers = updates.exclude;
+            updates.exclude = [];
+        }
+
+        // if there were some updates, then rewrite updates.yml
+        if (includeStreamers.length > 0 || excludeStreamers.length > 0) {
+            fs.writeFileSync(filename, yaml.safeDump(updates), "utf8");
+        }
+
+        return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
+    }
+
+
+    updateList(streamer, add, isTemp) {
+        let dirty = false;
+        let list = isTemp ? this.tempList : this.listConfig.streamers;
+        if (add) {
+            if (this.addStreamer(streamer, list, isTemp)) {
+                list.push(streamer.uid);
+                dirty = !isTemp;
+            }
+        } else if (this.removeStreamer(streamer, list)) {
+            if (this.listConfig.streamers.indexOf(streamer.uid) !== -1) {
+                list = _.without(list, streamer.uid);
+                dirty = !isTemp;
+            }
+        }
+        if (isTemp) {
+            this.tempList = list;
+        } else {
+            this.listConfig.streamers = list;
+        }
+        return dirty;
     }
 
     updateStreamers(bundle, add) {

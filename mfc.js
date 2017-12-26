@@ -2,15 +2,13 @@ const Promise = require("bluebird");
 const mfc     = require("MFCAuto");
 const site    = require("./site");
 const _       = require("underscore");
-const fs      = require("fs");
-const yaml    = require("js-yaml");
 const colors  = require("colors/safe");
 
 class Mfc extends site.Site {
     constructor(config, screen, logbody, inst, total) {
         super("MFC   ", config, "_mfc", screen, logbody, inst, total);
         mfc.setLogLevel(0);
-        this.mfcGuest = new mfc.Client("guest", "guest", {useWebSockets: config.mfcWebsocket, camYou: false});
+        this.mfcGuest = new mfc.Client("guest", "guest", {useWebSockets: this.listConfig.mfcWebsocket, camYou: false});
     }
 
     connect() {
@@ -28,60 +26,9 @@ class Mfc extends site.Site {
         return this.mfcGuest.queryUser(nm);
     }
 
-    processUpdates() {
-        const stats = fs.statSync("updates.yml");
-        if (!stats.isFile()) {
-            return {includeStreamers: [], excludeStreamers: [], dirty: false};
-        }
-
-        let includeStreamers = [];
-        let excludeStreamers = [];
-
-        const updates = yaml.safeLoad(fs.readFileSync("updates.yml", "utf8"));
-
-        if (!updates.includeMfc) {
-            updates.includeMfc = [];
-        } else if (updates.includeMfc.length > 0) {
-            this.msg(updates.includeMfc.length + " streamer(s) to include");
-            includeStreamers = updates.includeMfc;
-            updates.includeMfc = [];
-        }
-
-        if (!updates.excludeMfc) {
-            updates.excludeMfc = [];
-        } else if (updates.excludeMfc.length > 0) {
-            this.msg(updates.excludeMfc.length + " streamer(s) to exclude");
-            excludeStreamers = updates.excludeMfc;
-            updates.excludeMfc = [];
-        }
-
-        // if there were some updates, then rewrite updates.yml
-        if (includeStreamers.length > 0 || excludeStreamers.length > 0) {
-            fs.writeFileSync("updates.yml", yaml.safeDump(updates), "utf8");
-        }
-
-        return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
-    }
-
     updateList(nm, add, isTemp) {
         // Fetch the UID. The streamer does not have to be online for this.
-        return this.queryUser(nm).then((streamer) => {
-            let update = false;
-            if (typeof streamer !== "undefined") {
-                if (super.updateList(streamer, isTemp ? this.temp : this.config.mfc, add, isTemp)) {
-                    if (add) {
-                        this.config.mfc.push(streamer.uid);
-                        update = true;
-                    } else if (this.config.mfc.indexOf(streamer.uid) !== -1) {
-                        this.config.mfc = _.without(this.config.mfc, streamer.uid);
-                        update = true;
-                    }
-                }
-            } else {
-                this.errMsg("Could not find " + colors.name(nm));
-            }
-            return update;
-        });
+        return this.queryUser(nm).then((streamer) => super.updateList(streamer, add, isTemp));
     }
 
     updateStreamers(bundle, add) {
@@ -156,8 +103,16 @@ class Mfc extends site.Site {
 
         this.streamersToCap = [];
 
-        for (let i = 0; i < this.config.mfc.length; i++) {
-            queries.push(this.checkStreamerState(this.config.mfc[i]));
+        for (let i = 0; i < this.listConfig.streamers.length; i++) {
+            queries.push(this.checkStreamerState(this.listConfig.streamers[i]));
+        }
+
+        // Only add a streamer from temp list if they are not
+        // in the primary list.  Prevents duplicate recording.
+        for (let i = 0; i < this.tempList.length; i++) {
+            if (!_.contains(this.listConfig.streamers, this.tempList[i])) {
+                queries.push(this.checkStreamerState(this.tempList[i]));
+            }
         }
 
         // Only add a streamer from temp list if they are not

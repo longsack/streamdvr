@@ -172,6 +172,7 @@ function mainSiteLoop(site) {
         if (tryingToExit) {
             site.dbgMsg("Skipping lookup while exit in progress...");
         } else {
+            site.dbgMsg("type of tempList " + (typeof site.tempList));
             streamersToCap = site.getStreamersToCap();
         }
         return streamersToCap;
@@ -179,6 +180,7 @@ function mainSiteLoop(site) {
         site.recordStreamers(streamersToCap)
     ).catch((err) => {
         site.errMsg(err);
+        throw err;
     }).finally(() => {
         site.dbgMsg("Done, waiting " + config.scanInterval + " seconds.");
         setTimeout(() => { mainSiteLoop(site); }, config.scanInterval * 1000);
@@ -313,11 +315,11 @@ screen.append(inputBar);
 screen.render();
 
 if (config.enableMFC) {
-    mfc.msg(config.mfc.length + " streamer(s) in config");
+    mfc.msg(mfc.listConfig.streamers.length + " streamer(s) in config");
 }
 if (config.enableCB) {
-    cb.msg(config.cb.length + " streamer(s) in config");
+    cb.msg(cb.listConfig.streamers.length + " streamer(s) in config");
 }
 if (config.enableTwitch) {
-    twitch.msg(config.twitch.length + " streamer(s) in config");
+    twitch.msg(twitch.listConfig.streamers.length + " streamer(s) in config");
 }
