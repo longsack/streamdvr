@@ -297,23 +297,23 @@ class Site {
         return true;
     }
 
-    checkStreamerState(listitem, msg, isBroadcasting, prevState) {
-        if (listitem.state !== prevState) {
+    checkStreamerState(streamer, msg, isStreaming, prevState) {
+        if (streamer.state !== prevState) {
             this.msg(msg);
         }
-        if (listitem.captureProcess !== null && isBroadcasting === 0) {
+        if (streamer.captureProcess !== null && !isStreaming) {
             // Sometimes the ffmpeg process doesn't end when a streamer
             // stops broadcasting, so terminate it.
-            this.dbgMsg(colors.name(listitem.nm) + " is no longer broadcasting, ending ffmpeg process.");
-            this.haltCapture(listitem.uid);
+            this.dbgMsg(colors.name(streamer.nm) + " is no longer broadcasting, ending ffmpeg process.");
+            this.haltCapture(streamer.uid);
         }
     }
 
-    storeCapInfo(streamer, filename, captureProcess) {
-        if (this.streamerList.has(streamer.uid)) {
-            const listitem = this.streamerList.get(streamer.uid);
-            listitem.filename = filename;
-            listitem.captureProcess = captureProcess;
+    storeCapInfo(uid, filename, captureProcess) {
+        if (this.streamerList.has(uid)) {
+            const streamer = this.streamerList.get(uid);
+            streamer.filename = filename;
+            streamer.captureProcess = captureProcess;
             this.render();
         }
     }
@@ -327,7 +327,7 @@ class Site {
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
+            const cap = this.setupCapture(streamersToCap[i].uid).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
                     this.startCapture(bundle.streamer, bundle.filename, bundle.spawnArgs);
                 }
@@ -370,10 +370,10 @@ class Site {
         fs.writeFileSync(filename, yaml.safeDump(this.listConfig), "utf8");
     }
 
-    setupCapture(streamer) {
-        if (this.streamerList.has(streamer.uid)) {
-            const listitem = this.streamerList.get(streamer.uid);
-            if (listitem.captureProcess !== null) {
+    setupCapture(uid) {
+        if (this.streamerList.has(uid)) {
+            const streamer = this.streamerList.get(uid);
+            if (streamer.captureProcess !== null) {
                 this.dbgMsg(colors.name(streamer.nm) + " is already capturing");
                 return false;
             }
@@ -402,12 +402,12 @@ class Site {
 
         if (captureProcess.pid) {
             this.msg(colors.name(streamer.nm) + " recording started (" + filename + ".ts)");
-            this.storeCapInfo(streamer, fullname, captureProcess);
+            this.storeCapInfo(streamer.uid, fullname, captureProcess);
         }
 
         captureProcess.on("close", () => {
 
-            this.storeCapInfo(streamer, "", null);
+            this.storeCapInfo(streamer.uid, "", null);
 
             fs.stat(this.config.captureDirectory + "/" + fullname, (err, stats) => {
                 if (err) {
@@ -471,14 +471,14 @@ class Site {
         this.msg(colors.name(streamer.nm) + " converting to " + filename + "." + this.config.autoConvertType);
 
         const myCompleteProcess = childProcess.spawn("ffmpeg", mySpawnArguments);
-        this.storeCapInfo(streamer, filename + "." + this.config.autoConvertType, null);
+        this.storeCapInfo(streamer.uid, filename + "." + this.config.autoConvertType, null);
 
         myCompleteProcess.on("close", () => {
             if (!this.config.keepTsFile) {
                 fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
             }
             this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
-            this.storeCapInfo(streamer, "", null);
+            this.storeCapInfo(streamer.uid, "", null);
             this.semaphore--; // release semaphore only when ffmpeg process has ended
         });
 

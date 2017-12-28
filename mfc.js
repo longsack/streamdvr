@@ -52,7 +52,7 @@ class Mfc extends site.Site {
                 return true;
             }
 
-            let isBroadcasting = 0;
+            let isStreaming = 0;
             let msg = colors.name(model.nm);
 
             if (!this.streamerList.has(uid)) {
@@ -66,7 +66,7 @@ class Mfc extends site.Site {
                 streamer.state = "Public Chat";
                 msg += " is in public chat!";
                 this.streamersToCap.push(model);
-                isBroadcasting = 1;
+                isStreaming = 1;
             } else if (model.vs === mfc.STATE.GroupShow) {
                 streamer.state = "Group Show";
                 msg += " is in a group show";
@@ -89,7 +89,7 @@ class Mfc extends site.Site {
                 msg += " has logged off.";
             }
 
-            super.checkStreamerState(streamer, msg, isBroadcasting, prevState);
+            super.checkStreamerState(streamer, msg, isStreaming, prevState);
             this.render();
 
             return true;

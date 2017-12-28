@@ -25,20 +25,20 @@ class Twitch extends site.Site {
             const streamer = this.streamerList.get(nm);
             const prevState = streamer.state;
 
-            let isBroadcasting = 0;
+            let isStreaming = 0;
             let msg = colors.name(nm);
 
             if (typeof json.stream === "undefined" || json.stream === null) {
                 msg += " is offline.";
                 streamer.state = "Offline";
             } else {
-                msg += " is live streaming";
+                msg += " is streaming.";
                 this.streamersToCap.push({uid: nm, nm: nm});
-                isBroadcasting = 1;
+                isStreaming = 1;
                 streamer.state = "Streaming";
             }
 
-            super.checkStreamerState(streamer, msg, isBroadcasting, prevState);
+            super.checkStreamerState(streamer, msg, isStreaming, prevState);
 
             this.render();
             return true;
