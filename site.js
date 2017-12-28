@@ -327,7 +327,7 @@ class Site {
 
         this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
         for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i].uid).then((bundle) => {
+            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
                     this.startCapture(bundle.streamer, bundle.filename, bundle.spawnArgs);
                 }

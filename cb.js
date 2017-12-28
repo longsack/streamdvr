@@ -128,7 +128,7 @@ class Cb extends site.Site {
 
     setupCapture(streamer) {
 
-        if (!super.setupCapture(streamer)) {
+        if (!super.setupCapture(streamer.uid)) {
             const empty = {spawnArgs: "", filename: "", streamer: ""};
             return Promise.try(() => empty);
         }

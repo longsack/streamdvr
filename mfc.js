@@ -121,7 +121,7 @@ class Mfc extends site.Site {
 
     setupCapture(model) {
 
-        if (!super.setupCapture(model)) {
+        if (!super.setupCapture(model.uid)) {
             const empty = {spawnArgs: "", filename: "", streamer: ""};
             return Promise.try(() => empty);
         }
