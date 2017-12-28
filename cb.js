@@ -15,12 +15,12 @@ class Cb extends site.Site {
 
         for (let i = 0; i < this.listConfig.streamers.length; i++) {
             const nm = this.listConfig.streamers[i];
-            this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
+            this.streamerList.set(nm, {uid: nm, nm: nm, state: "Offline", filename: "", captureProcess: null});
         }
     }
 
     updateList(nm, add, isTemp) {
-        return Promise.try(() =>  super.updateList({nm: nm, uid: nm}, add, isTemp));
+        return Promise.try(() => super.updateList({nm: nm, uid: nm}, add, isTemp));
     }
 
     checkStreamerState(nm) {
@@ -29,18 +29,18 @@ class Cb extends site.Site {
         let isBroadcasting = 0;
 
         return Promise.try(() => fetch(url, {timeout: this.timeOut})).then((res) => res.json()).then((json) => {
-            const listitem = this.streamerList.get(nm);
-            const prevState = listitem.streamerState;
+            const streamer = this.streamerList.get(nm);
+            const prevState = streamer.state;
 
             if (typeof json.status !== "undefined") {
                 if (json.detail === "This room requires a password.") {
-                    listitem.streamerState = "Password Protected";
+                    streamer.state = "Password Protected";
                 } else if (json.detail === "Room is deleted.") {
-                    listitem.streamerState = "Deleted";
+                    streamer.state = "Deleted";
                 } else {
-                    listitem.streamerState = "Access Denied";
+                    streamer.state = "Access Denied";
                 }
-                this.streamerList.set(nm, listitem);
+                this.streamerList.set(nm, streamer);
                 msg += ", " + json.detail;
                 this.dbgMsg(msg);
             } else {
@@ -50,29 +50,28 @@ class Cb extends site.Site {
                     msg += " is in public chat!";
                     this.streamersToCap.push({uid: nm, nm: nm});
                     isBroadcasting = 1;
-                    listitem.streamerState = "Public Chat";
+                    streamer.state = "Public Chat";
                 } else if (currState === "private") {
                     msg += " is in a private show.";
-                    listitem.streamerState = "Private";
+                    streamer.state = "Private";
                 } else if (currState === "group") {
                     msg += " is in a group show.";
-                    listitem.streamerState = "Group Show";
+                    streamer.state = "Group Show";
                 } else if (currState === "away") {
                     msg += colors.name("'s") + " stream is off.";
-                    listitem.streamerState = "Away";
+                    streamer.state = "Away";
                 } else if (currState === "hidden") {
                     msg += " is online but hidden.";
-                    listitem.streamerState = "Hidden";
+                    streamer.state = "Hidden";
                 } else if (currState === "offline") {
                     msg += " has gone offline.";
-                    listitem.streamerState = "Offline";
+                    streamer.state = "Offline";
                 } else {
                     msg += " has unknown state: " + currState;
-                    listitem.streamerState = currState;
+                    streamer.state = currState;
                 }
 
-                super.checkStreamerState(listitem, msg, isBroadcasting, prevState);
-
+                super.checkStreamerState(streamer, msg, isBroadcasting, prevState);
             }
             this.render();
             return true;

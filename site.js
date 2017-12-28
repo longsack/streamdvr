@@ -46,7 +46,7 @@ class Site {
         // JSON data
         //     uid
         //     nm
-        //     streamerState
+        //     state
         //     filename
         //     captureProcess
         this.streamerList = new Map();
@@ -281,7 +281,7 @@ class Site {
             this.msg(colors.name(streamer.nm) + " is already in the capture list");
         }
         if (!this.streamerList.has(streamer.uid)) {
-            this.streamerList.set(streamer.uid, {uid: streamer.uid, nm: streamer.nm, streamerState: "Offline", filename: "", captureProcess: null});
+            this.streamerList.set(streamer.uid, {uid: streamer.uid, nm: streamer.nm, state: "Offline", filename: "", captureProcess: null});
             this.render();
         }
         return rc;
@@ -298,7 +298,7 @@ class Site {
     }
 
     checkStreamerState(listitem, msg, isBroadcasting, prevState) {
-        if (listitem.streamerState !== prevState) {
+        if (listitem.state !== prevState) {
             this.msg(msg);
         }
         if (listitem.captureProcess !== null && isBroadcasting === 0) {
@@ -397,18 +397,19 @@ class Site {
     }
 
     startCapture(streamer, filename, spawnArgs) {
+        const fullname = filename + ".ts";
         const captureProcess = childProcess.spawn("ffmpeg", spawnArgs);
 
         if (captureProcess.pid) {
             this.msg(colors.name(streamer.nm) + " recording started (" + filename + ".ts)");
-            this.storeCapInfo(streamer, filename + ".ts", captureProcess);
+            this.storeCapInfo(streamer, fullname, captureProcess);
         }
 
         captureProcess.on("close", () => {
 
             this.storeCapInfo(streamer, "", null);
 
-            fs.stat(this.config.captureDirectory + "/" + filename + ".ts", (err, stats) => {
+            fs.stat(this.config.captureDirectory + "/" + fullname, (err, stats) => {
                 if (err) {
                     if (err.code === "ENOENT") {
                         this.errMsg(colors.name(streamer.nm) + ", " + filename + ".ts not found in capturing directory, cannot convert to " + this.config.autoConvertType);
@@ -417,7 +418,7 @@ class Site {
                     }
                 } else if (stats.size <= this.config.minByteSize) {
                     this.msg(colors.name(streamer.nm) + " recording automatically deleted (size=" + stats.size + " < minSizeBytes=" + this.config.minByteSize + ")");
-                    fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
+                    fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
                 } else {
                     this.postProcess(streamer, filename);
                 }
@@ -435,11 +436,12 @@ class Site {
     }
 
     postProcess(streamer, filename) {
+        const fullname = filename + ".ts";
         const completeDir = this.getCompleteDir(streamer);
 
         if (this.config.autoConvertType !== "mp4" && this.config.autoConvertType !== "mkv") {
             this.dbgMsg(colors.name(streamer.nm) + " recording moved (" + this.config.captureDirectory + "/" + filename + ".ts to " + completeDir + "/" + filename + ".ts)");
-            mv(this.config.captureDirectory + "/" + filename + ".ts", completeDir + "/" + filename + ".ts", (err) => {
+            mv(this.config.captureDirectory + "/" + fullname, completeDir + "/" + fullname, (err) => {
                 if (err) {
                     this.errMsg(colors.site(filename) + ": " + err.toString());
                 }
@@ -452,7 +454,7 @@ class Site {
             "-v",
             "fatal",
             "-i",
-            this.config.captureDirectory + "/" + filename + ".ts",
+            this.config.captureDirectory + "/" + fullname,
             "-c",
             "copy"
         ];
@@ -473,7 +475,7 @@ class Site {
 
         myCompleteProcess.on("close", () => {
             if (!this.config.keepTsFile) {
-                fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
+                fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
             }
             this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
             this.storeCapInfo(streamer, "", null);
@@ -526,8 +528,8 @@ class Site {
             for (let j = 0; j < 16 - value.nm.length; j++) {
                 line += " ";
             }
-            line += value.streamerState === "Offline" ? colors.offline(value.streamerState) : colors.state(value.streamerState);
-            for (let j = 0; j < 16 - value.streamerState.length; j++) {
+            line += value.state === "Offline" ? colors.offline(value.state) : colors.state(value.state);
+            for (let j = 0; j < 16 - value.state.length; j++) {
                 line += " ";
             }
             line += colors.file(value.filename);

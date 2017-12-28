@@ -10,7 +10,7 @@ class Twitch extends site.Site {
 
         for (let i = 0; i < this.listConfig.streamers.length; i++) {
             const nm = this.listConfig.streamers[i];
-            this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
+            this.streamerList.set(nm, {uid: nm, nm: nm, state: "Offline", filename: "", captureProcess: null});
         }
     }
 
@@ -22,23 +22,23 @@ class Twitch extends site.Site {
         const url = "https://api.twitch.tv/kraken/streams/" + nm + "?client_id=rznf9ecq10bbcwe91n6hhnul3dbpg9";
 
         return Promise.try(() => fetch(url)).then((res) => res.json()).then((json) => {
-            const listitem = this.streamerList.get(nm);
-            const prevState = listitem.streamerState;
+            const streamer = this.streamerList.get(nm);
+            const prevState = streamer.state;
 
             let isBroadcasting = 0;
             let msg = colors.name(nm);
 
             if (typeof json.stream === "undefined" || json.stream === null) {
                 msg += " is offline.";
-                listitem.streamerState = "Offline";
+                streamer.state = "Offline";
             } else {
                 msg += " is live streaming";
                 this.streamersToCap.push({uid: nm, nm: nm});
                 isBroadcasting = 1;
-                listitem.streamerState = "Streaming";
+                streamer.state = "Streaming";
             }
 
-            super.checkStreamerState(listitem, msg, isBroadcasting, prevState);
+            super.checkStreamerState(streamer, msg, isBroadcasting, prevState);
 
             this.render();
             return true;
