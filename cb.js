@@ -66,7 +66,7 @@ class Cb extends site.Site {
                     listitem.streamerState = currState;
                 }
 
-                super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, prevState);
+                super.checkStreamerState(listitem, msg, isBroadcasting, prevState);
 
             }
             this.render();
@@ -99,13 +99,13 @@ class Cb extends site.Site {
         for (let i = 0; i < this.listConfig.streamers.length; i++) {
             const nm = this.listConfig.streamers[i];
             if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: ""});
+                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
             }
         }
         for (let i = 0; i < this.tempList.length; i++) {
             const nm = this.tempList[i];
             if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: ""});
+                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
             }
         }
 

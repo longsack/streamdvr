@@ -56,7 +56,7 @@ class Mfc extends site.Site {
             let msg = colors.name(streamer.nm);
 
             if (!this.streamerList.has(uid)) {
-                this.streamerList.set(uid, {uid: uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
+                this.streamerList.set(uid, {uid: uid, nm: streamer.nm, streamerState: "Offline", filename: "", captureProcess: null});
             }
 
             const listitem = this.streamerList.get(uid);
@@ -89,7 +89,7 @@ class Mfc extends site.Site {
                 msg += " has logged off.";
             }
 
-            super.checkStreamerState(streamer, listitem, msg, isBroadcasting, prevState);
+            super.checkStreamerState(listitem, msg, isBroadcasting, prevState);
 
             this.render();
             return true;

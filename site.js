@@ -35,22 +35,20 @@ class Site {
         // Counting semaphore to track outstanding post process ffmpeg jobs
         this.semaphore = 0;
 
-        // Data accumulator for outstanding status lookup threads
-        // reset on each loop
+        // Temporary data store used by child classes for outstanding status
+        // lookup threads.  Is cleared and repopulated during each loop
         this.streamersToCap = [];
 
         // Streamers that are being temporarily captured for this session only
         this.tempList = [];
 
-        // Outstanding ffmpeg jobs
-        this.currentlyCapping = new Map();
-
         // Data used to render the displayed lists
-        // JSON format
+        // JSON data
         //     uid
         //     nm
         //     streamerState
         //     filename
+        //     captureProcess
         this.streamerList = new Map();
 
         // Calculate this site's screen layout based on its instance number
@@ -171,12 +169,16 @@ class Site {
             return;
         }
 
-        for (const capInfo of this.currentlyCapping.values()) {
-            const stat = fs.statSync(this.config.captureDirectory + "/" + capInfo.filename + ".ts");
-            this.dbgMsg(colors.name(capInfo.nm) + " file size (" + capInfo.filename + ".ts), size=" + stat.size + ", maxByteSize=" + maxByteSize);
+        for (const streamers of this.streamerList.values()) {
+            if (streamers.captureProcess === null) {
+                continue;
+            }
+
+            const stat = fs.statSync(this.config.captureDirectory + "/" + streamers.filename);
+            this.dbgMsg(colors.name(streamers.nm) + " file size (" + streamers.filename + "), size=" + stat.size + ", maxByteSize=" + maxByteSize);
             if (stat.size >= maxByteSize) {
-                this.msg(colors.name(capInfo.nm) + " recording has exceeded file size limit (size=" + stat.size + " > maxByteSize=" + maxByteSize + ")");
-                capInfo.captureProcess.kill("SIGINT");
+                this.msg(colors.name(streamers.nm) + " recording has exceeded file size limit (size=" + stat.size + " > maxByteSize=" + maxByteSize + ")");
+                streamers.captureProcess.kill("SIGINT");
             }
         }
     }
@@ -279,7 +281,7 @@ class Site {
             this.msg(colors.name(streamer.nm) + " is already in the capture list");
         }
         if (!this.streamerList.has(streamer.uid)) {
-            this.streamerList.set(streamer.uid, {uid: streamer.uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
+            this.streamerList.set(streamer.uid, {uid: streamer.uid, nm: streamer.nm, streamerState: "Offline", filename: "", captureProcess: null});
             this.render();
         }
         return rc;
@@ -295,25 +297,25 @@ class Site {
         return true;
     }
 
-    checkStreamerState(streamer, listitem, msg, isBroadcasting, prevState) {
-        this.streamerList.set(streamer.uid, listitem);
+    checkStreamerState(listitem, msg, isBroadcasting, prevState) {
         if (listitem.streamerState !== prevState) {
             this.msg(msg);
         }
-        if (this.currentlyCapping.has(streamer.uid) && isBroadcasting === 0) {
+        if (listitem.captureProcess !== null && isBroadcasting === 0) {
             // Sometimes the ffmpeg process doesn't end when a streamer
             // stops broadcasting, so terminate it.
-            this.dbgMsg(colors.name(streamer.nm) + " is no longer broadcasting, ending ffmpeg process.");
-            this.haltCapture(streamer.uid);
+            this.dbgMsg(colors.name(listitem.nm) + " is no longer broadcasting, ending ffmpeg process.");
+            this.haltCapture(listitem.uid);
         }
     }
 
-    addStreamerToCapList(streamer, filename, captureProcess) {
-        this.currentlyCapping.set(streamer.uid, {nm: streamer.nm, filename: filename, captureProcess: captureProcess});
-    }
-
-    removeStreamerFromCapList(streamer) {
-        this.currentlyCapping.delete(streamer.uid);
+    storeCapInfo(streamer, filename, captureProcess) {
+        if (this.streamerList.has(streamer.uid)) {
+            const listitem = this.streamerList.get(streamer.uid);
+            listitem.filename = filename + ".ts";
+            listitem.captureProcess = captureProcess;
+            this.render();
+        }
     }
 
     recordStreamers(streamersToCap) {
@@ -327,7 +329,7 @@ class Site {
         for (let i = 0; i < streamersToCap.length; i++) {
             const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
-                    this.startCapture(bundle.spawnArgs, bundle.filename, bundle.streamer);
+                    this.startCapture(bundle.streamer, bundle.filename, bundle.spawnArgs);
                 }
             });
             caps.push(cap);
@@ -336,20 +338,29 @@ class Site {
     }
 
     getNumCapsInProgress() {
-        return this.currentlyCapping.size;
+        let count = 0;
+
+        this.streamerList.forEach((value) => {
+            count += value.captureProcess !== null;
+        });
+
+        return count;
     }
 
     haltAllCaptures() {
-        this.currentlyCapping.forEach((value) => {
-            value.captureProcess.kill("SIGINT");
+        this.streamerList.forEach((value) => {
+            if (value.captureProcess !== null) {
+                value.captureProcess.kill("SIGINT");
+            }
         });
     }
 
     haltCapture(uid) {
-        if (this.currentlyCapping.has(uid)) {
-            const capInfo = this.currentlyCapping.get(uid);
-
-            capInfo.captureProcess.kill("SIGINT");
+        if (this.streamerList.has(uid)) {
+            const streamer = this.streamerList.get(uid);
+            if (streamer.captureProcess !== null) {
+                streamer.captureProcess.kill("SIGINT");
+            }
         }
     }
 
@@ -360,12 +371,15 @@ class Site {
     }
 
     setupCapture(streamer) {
-        if (this.currentlyCapping.has(streamer.uid)) {
-            this.dbgMsg(colors.name(streamer.nm) + " is already capturing");
-            return false;
+        if (this.streamerList.has(streamer.uid)) {
+            const listitem = this.streamerList.get(streamer.uid);
+            if (listitem.captureProcess !== null) {
+                this.dbgMsg(colors.name(streamer.nm) + " is already capturing");
+                return false;
+            }
+            return true;
         }
-
-        return true;
+        return false;
     }
 
     getCompleteDir(streamer) {
@@ -382,24 +396,17 @@ class Site {
         return completeDir;
     }
 
-    startCapture(spawnArgs, filename, streamer) {
+    startCapture(streamer, filename, spawnArgs) {
         const captureProcess = childProcess.spawn("ffmpeg", spawnArgs);
 
-        const listitem = this.streamerList.get(streamer.uid);
-        listitem.filename = filename + ".ts";
-        this.streamerList.set(streamer.uid, listitem);
+        if (captureProcess.pid) {
+            this.msg(colors.name(streamer.nm) + " recording started (" + filename + ".ts)");
+            this.storeCapInfo(streamer, filename, captureProcess);
+        }
 
         captureProcess.on("close", () => {
 
-            // When removing a streamer, the streamerList entry gets removed
-            // before the ffmpeg process ends, so check if it exists.
-            if (this.streamerList.has(streamer.uid)) {
-                const li = this.streamerList.get(streamer.uid);
-                li.filename = "";
-                this.streamerList.set(streamer.uid, li);
-            }
-
-            this.removeStreamerFromCapList(streamer);
+            this.storeCapInfo(streamer, "", null);
 
             fs.stat(this.config.captureDirectory + "/" + filename + ".ts", (err, stats) => {
                 if (err) {
@@ -412,7 +419,7 @@ class Site {
                     this.msg(colors.name(streamer.nm) + " recording automatically deleted (size=" + stats.size + " < minSizeBytes=" + this.config.minByteSize + ")");
                     fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
                 } else {
-                    this.postProcess(filename, streamer);
+                    this.postProcess(streamer, filename);
                 }
             });
 
@@ -424,17 +431,10 @@ class Site {
                     this.render();
                 });
             }
-
         });
-
-        if (captureProcess.pid) {
-            this.msg(colors.name(streamer.nm) + " recording started (" + filename + ".ts)");
-            this.render();
-            this.addStreamerToCapList(streamer, filename, captureProcess);
-        }
     }
 
-    postProcess(filename, streamer) {
+    postProcess(streamer, filename) {
         const completeDir = this.getCompleteDir(streamer);
 
         if (this.config.autoConvertType !== "mp4" && this.config.autoConvertType !== "mkv") {
@@ -466,28 +466,17 @@ class Site {
         mySpawnArguments.push(completeDir + "/" + filename + "." + this.config.autoConvertType);
 
         this.semaphore++;
-
         this.msg(colors.name(streamer.nm) + " converting to " + filename + "." + this.config.autoConvertType);
 
         const myCompleteProcess = childProcess.spawn("ffmpeg", mySpawnArguments);
-        if (this.streamerList.has(streamer.uid)) {
-            const listitem = this.streamerList.get(streamer.uid);
-            listitem.filename = filename + "." + this.config.autoConvertType;
-            this.streamerList.set(streamer.uid, listitem);
-            this.render();
-        }
+        this.storeCapInfo(streamer, filename + "." + this.config.autoConvertType, null);
 
         myCompleteProcess.on("close", () => {
             if (!this.config.keepTsFile) {
                 fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
             }
             this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
-            if (this.streamerList.has(streamer.uid)) {
-                const li = this.streamerList.get(streamer.uid);
-                li.filename = "";
-                this.streamerList.set(streamer.uid, li);
-                this.render();
-            }
+            this.storeCapInfo(streamer, "", null);
             this.semaphore--; // release semaphore only when ffmpeg process has ended
         });
 
