@@ -12,6 +12,11 @@ class Cb extends site.Site {
         super("CB    ", config, "_cb", screen, logbody, inst, total);
         this.cbData = new Map();
         this.timeOut = 20000;
+
+        for (let i = 0; i < this.listConfig.streamers.length; i++) {
+            const nm = this.listConfig.streamers[i];
+            this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
+        }
     }
 
     updateList(nm, add, isTemp) {
@@ -80,7 +85,6 @@ class Cb extends site.Site {
     }
 
     checkStreamersState(batch) {
-        const me = this;
         const queries = [];
 
         for (let i = 0; i < batch.length; i++) {
@@ -88,28 +92,12 @@ class Cb extends site.Site {
         }
 
         return Promise.all(queries).then(() => true).catch((err) => {
-            me.errMsg(err.toString());
+            this.errMsg(err.toString());
         });
     }
 
     getStreamersToCap() {
         this.streamersToCap = [];
-
-        // TODO: This should be somewhere else
-        for (let i = 0; i < this.listConfig.streamers.length; i++) {
-            const nm = this.listConfig.streamers[i];
-            if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
-            }
-        }
-        for (let i = 0; i < this.tempList.length; i++) {
-            const nm = this.tempList[i];
-            if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
-            }
-        }
-
-        this.render();
 
         const nms = [];
         this.streamerList.forEach((value) => {

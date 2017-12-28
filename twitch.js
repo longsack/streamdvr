@@ -7,6 +7,11 @@ const site         = require("./site");
 class Twitch extends site.Site {
     constructor(config, screen, logbody, inst, total) {
         super("TWITCH", config, "_twitch", screen, logbody, inst, total);
+
+        for (let i = 0; i < this.listConfig.streamers.length; i++) {
+            const nm = this.listConfig.streamers[i];
+            this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
+        }
     }
 
     updateList(nm, add, isTemp) {
@@ -46,24 +51,8 @@ class Twitch extends site.Site {
     }
 
     getStreamersToCap() {
-        this.streamersToCap = [];
-
-        // TODO: This should be somewhere else
-        for (let i = 0; i < this.listConfig.streamers.length; i++) {
-            const nm = this.listConfig.streamers[i];
-            if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
-            }
-        }
-        for (let i = 0; i < this.tempList.length; i++) {
-            const nm = this.tempList[i];
-            if (!this.streamerList.has(nm)) {
-                this.streamerList.set(nm, {uid: nm, nm: nm, streamerState: "Offline", filename: "", captureProcess: null});
-            }
-        }
-        this.render();
-
         const queries = [];
+        this.streamersToCap = [];
 
         this.streamerList.forEach((value) => {
             queries.push(this.checkStreamerState(value.nm));
