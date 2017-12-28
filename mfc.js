@@ -55,11 +55,12 @@ class Mfc extends site.Site {
             let isBroadcasting = 0;
             let msg = colors.name(streamer.nm);
 
-            if (!this.streamerList.has(streamer.nm)) {
-                this.streamerList.set(streamer.nm, {uid: uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
+            if (!this.streamerList.has(uid)) {
+                this.streamerList.set(uid, {uid: uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
             }
 
-            const listitem = this.streamerList.get(streamer.nm);
+            const listitem = this.streamerList.get(uid);
+            const prevState = listitem.streamerState;
 
             if (streamer.vs === mfc.STATE.FreeChat) {
                 listitem.streamerState = "Public Chat";
@@ -88,7 +89,7 @@ class Mfc extends site.Site {
                 msg += " has logged off.";
             }
 
-            super.checkStreamerState(streamer, listitem, msg, isBroadcasting, streamer.vs === mfc.STATE.Offline, streamer.vs);
+            super.checkStreamerState(streamer, listitem, msg, isBroadcasting, prevState);
 
             this.render();
             return true;

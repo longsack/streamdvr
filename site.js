@@ -10,7 +10,6 @@ const blessed      = require("blessed");
 
 class Site {
     constructor(siteName, config, siteDir, screen, logbody, inst, total) {
-
         // Sitename includes spaces to align log columns easily.
         // Use .trim() as needed.
         this.siteName = siteName;
@@ -43,13 +42,15 @@ class Site {
         // Streamers that are being temporarily captured for this session only
         this.tempList = [];
 
-        // Used for intelligent printouts to avoid log spam
-        this.streamerState = new Map();
-
         // Outstanding ffmpeg jobs
         this.currentlyCapping = new Map();
 
         // Data used to render the displayed lists
+        // JSON format
+        //     uid
+        //     nm
+        //     streamerState
+        //     filename
         this.streamerList = new Map();
 
         // Calculate this site's screen layout based on its instance number
@@ -236,7 +237,6 @@ class Site {
         return {includeStreamers: includeStreamers, excludeStreamers: excludeStreamers, dirty: false};
     }
 
-
     updateList(streamer, add, isTemp) {
         let dirty = false;
         let list = isTemp ? this.tempList : this.listConfig.streamers;
@@ -278,8 +278,8 @@ class Site {
         } else {
             this.msg(colors.name(streamer.nm) + " is already in the capture list");
         }
-        if (!this.streamerList.has(streamer.nm)) {
-            this.streamerList.set(streamer.nm, {uid: streamer.uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
+        if (!this.streamerList.has(streamer.uid)) {
+            this.streamerList.set(streamer.uid, {uid: streamer.uid, nm: streamer.nm, streamerState: "Offline", filename: ""});
             this.render();
         }
         return rc;
@@ -287,20 +287,19 @@ class Site {
 
     removeStreamer(streamer) {
         this.msg(colors.name(streamer.nm) + " removed from capture list.");
-        if (this.streamerList.has(streamer.nm)) {
-            this.streamerList.delete(streamer.nm);
+        if (this.streamerList.has(streamer.uid)) {
+            this.streamerList.delete(streamer.uid);
             this.render();
         }
         this.haltCapture(streamer.uid);
         return true;
     }
 
-    checkStreamerState(streamer, listitem, msg, isBroadcasting, isOffline, newState) {
-        this.streamerList.set(streamer.nm, listitem);
-        if ((this.streamerState.has(streamer.uid) || !isOffline) && newState !== this.streamerState.get(streamer.uid)) {
+    checkStreamerState(streamer, listitem, msg, isBroadcasting, prevState) {
+        this.streamerList.set(streamer.uid, listitem);
+        if (listitem.streamerState !== prevState) {
             this.msg(msg);
         }
-        this.streamerState.set(streamer.uid, newState);
         if (this.currentlyCapping.has(streamer.uid) && isBroadcasting === 0) {
             // Sometimes the ffmpeg process doesn't end when a streamer
             // stops broadcasting, so terminate it.
@@ -386,18 +385,18 @@ class Site {
     startCapture(spawnArgs, filename, streamer) {
         const captureProcess = childProcess.spawn("ffmpeg", spawnArgs);
 
-        const listitem = this.streamerList.get(streamer.nm);
+        const listitem = this.streamerList.get(streamer.uid);
         listitem.filename = filename + ".ts";
-        this.streamerList.set(streamer.nm, listitem);
+        this.streamerList.set(streamer.uid, listitem);
 
         captureProcess.on("close", () => {
 
             // When removing a streamer, the streamerList entry gets removed
             // before the ffmpeg process ends, so check if it exists.
-            if (this.streamerList.has(streamer.nm)) {
-                const li = this.streamerList.get(streamer.nm);
+            if (this.streamerList.has(streamer.uid)) {
+                const li = this.streamerList.get(streamer.uid);
                 li.filename = "";
-                this.streamerList.set(streamer.nm, li);
+                this.streamerList.set(streamer.uid, li);
             }
 
             this.removeStreamerFromCapList(streamer);
@@ -418,7 +417,7 @@ class Site {
             });
 
             // Refresh streamer status since streamer has likely changed state
-            if (this.streamerList.has(streamer.nm)) {
+            if (this.streamerList.has(streamer.uid)) {
                 const queries = [];
                 queries.push(this.checkStreamerState(streamer.uid));
                 Promise.all(queries).then(() => {
@@ -437,7 +436,6 @@ class Site {
 
     postProcess(filename, streamer) {
         const completeDir = this.getCompleteDir(streamer);
-        let mySpawnArguments;
 
         if (this.config.autoConvertType !== "mp4" && this.config.autoConvertType !== "mkv") {
             this.dbgMsg(colors.name(streamer.nm) + " recording moved (" + this.config.captureDirectory + "/" + filename + ".ts to " + completeDir + "/" + filename + ".ts)");
@@ -449,43 +447,33 @@ class Site {
             return;
         }
 
+        const mySpawnArguments = [
+            "-hide_banner",
+            "-v",
+            "fatal",
+            "-i",
+            this.config.captureDirectory + "/" + filename + ".ts",
+            "-c",
+            "copy"
+        ];
+
         if (this.config.autoConvertType === "mp4") {
-            mySpawnArguments = [
-                "-hide_banner",
-                "-v",
-                "fatal",
-                "-i",
-                this.config.captureDirectory + "/" + filename + ".ts",
-                "-c",
-                "copy",
-                "-bsf:a",
-                "aac_adtstoasc",
-                "-copyts",
-                completeDir + "/" + filename + "." + this.config.autoConvertType
-            ];
-        } else if (this.config.autoConvertType === "mkv") {
-            mySpawnArguments = [
-                "-hide_banner",
-                "-v",
-                "fatal",
-                "-i",
-                this.config.captureDirectory + "/" + filename + ".ts",
-                "-c",
-                "copy",
-                "-copyts",
-                completeDir + "/" + filename + "." + this.config.autoConvertType
-            ];
+            mySpawnArguments.push("-bsf:a");
+            mySpawnArguments.push("aac_adtstoasc");
         }
+
+        mySpawnArguments.push("-copyts");
+        mySpawnArguments.push(completeDir + "/" + filename + "." + this.config.autoConvertType);
 
         this.semaphore++;
 
         this.msg(colors.name(streamer.nm) + " converting to " + filename + "." + this.config.autoConvertType);
 
         const myCompleteProcess = childProcess.spawn("ffmpeg", mySpawnArguments);
-        if (this.streamerList.has(streamer.nm)) {
-            const listitem = this.streamerList.get(streamer.nm);
+        if (this.streamerList.has(streamer.uid)) {
+            const listitem = this.streamerList.get(streamer.uid);
             listitem.filename = filename + "." + this.config.autoConvertType;
-            this.streamerList.set(streamer.nm, listitem);
+            this.streamerList.set(streamer.uid, listitem);
             this.render();
         }
 
@@ -494,10 +482,10 @@ class Site {
                 fs.unlinkSync(this.config.captureDirectory + "/" + filename + ".ts");
             }
             this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
-            if (this.streamerList.has(streamer.nm)) {
-                const li = this.streamerList.get(streamer.nm);
+            if (this.streamerList.has(streamer.uid)) {
+                const li = this.streamerList.get(streamer.uid);
                 li.filename = "";
-                this.streamerList.set(streamer.nm, li);
+                this.streamerList.set(streamer.uid, li);
                 this.render();
             }
             this.semaphore--; // release semaphore only when ffmpeg process has ended
@@ -532,7 +520,17 @@ class Site {
             this.list.deleteLine(0);
         }
 
-        const sortedKeys = Array.from(this.streamerList.keys()).sort();
+        // Map keys are UID, but want to sort list by name.
+        const sortedKeys = Array.from(this.streamerList.keys()).sort((a, b) => {
+            if (this.streamerList.get(a).nm < this.streamerList.get(b).nm) {
+                return -1;
+            }
+            if (this.streamerList.get(a).nm > this.streamerList.get(b).nm) {
+                return 1;
+            }
+            return 0;
+        });
+
         for (let i = 0; i < sortedKeys.length; i++) {
             const value = this.streamerList.get(sortedKeys[i]);
             let line = colors.name(value.nm);

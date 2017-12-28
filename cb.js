@@ -25,6 +25,7 @@ class Cb extends site.Site {
 
         return Promise.try(() => fetch(url, {timeout: this.timeOut})).then((res) => res.json()).then((json) => {
             const listitem = this.streamerList.get(nm);
+            const prevState = listitem.streamerState;
 
             if (typeof json.status !== "undefined") {
                 if (json.detail === "This room requires a password.") {
@@ -34,7 +35,6 @@ class Cb extends site.Site {
                 } else {
                     listitem.streamerState = "Access Denied";
                 }
-                this.streamerState.set(nm, listitem.streamerState);
                 this.streamerList.set(nm, listitem);
                 msg += ", " + json.detail;
                 this.dbgMsg(msg);
@@ -66,7 +66,7 @@ class Cb extends site.Site {
                     listitem.streamerState = currState;
                 }
 
-                super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, currState === "offline", currState);
+                super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, prevState);
 
             }
             this.render();

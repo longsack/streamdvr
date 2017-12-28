@@ -18,6 +18,8 @@ class Twitch extends site.Site {
 
         return Promise.try(() => fetch(url)).then((res) => res.json()).then((json) => {
             const listitem = this.streamerList.get(nm);
+            const prevState = listitem.streamerState;
+
             let isBroadcasting = 0;
             let msg = colors.name(nm);
 
@@ -31,8 +33,7 @@ class Twitch extends site.Site {
                 listitem.streamerState = "Streaming";
             }
 
-            this.streamerState.set(nm, listitem.streamerState);
-            super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, listitem.streamerState === "offline", listitem.streamerState);
+            super.checkStreamerState({nm: nm, uid: nm}, listitem, msg, isBroadcasting, prevState);
 
             this.render();
             return true;
