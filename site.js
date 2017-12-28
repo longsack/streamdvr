@@ -312,7 +312,7 @@ class Site {
     storeCapInfo(streamer, filename, captureProcess) {
         if (this.streamerList.has(streamer.uid)) {
             const listitem = this.streamerList.get(streamer.uid);
-            listitem.filename = filename + ".ts";
+            listitem.filename = filename;
             listitem.captureProcess = captureProcess;
             this.render();
         }
@@ -401,7 +401,7 @@ class Site {
 
         if (captureProcess.pid) {
             this.msg(colors.name(streamer.nm) + " recording started (" + filename + ".ts)");
-            this.storeCapInfo(streamer, filename, captureProcess);
+            this.storeCapInfo(streamer, filename + ".ts", captureProcess);
         }
 
         captureProcess.on("close", () => {
