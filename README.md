@@ -36,11 +36,15 @@ Refer to `config.yml`.
 
 * For some sites, streamers are stored in `config.yml` using an ID number supplied by the site.  This allows StreamDVR to track the streamer even if they change their name.
 
-* To run: `node main.js`
-* To run without color: `node main.js --no-color`
+* To run: `node streamdvr.js`
+* To run without color: `node streamdvr.js --no-color`
 
 Console Commands
 ===========
+* add     [site] [streamer]
+* addtemp [site] [streamer]
+* remove  [site] [streamer]
+* reload
 * hide [log|list]
 * show [log|list]
 * help
