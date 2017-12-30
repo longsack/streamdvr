@@ -32,9 +32,6 @@ class Site {
         this.inst = inst;
         this.total = total;
 
-        // Counting semaphore to track outstanding post process ffmpeg jobs
-        this.semaphore = 0;
-
         // Temporary data store used by child classes for outstanding status
         // lookup threads.  Is cleared and repopulated during each loop
         this.streamersToCap = [];
@@ -407,8 +404,6 @@ class Site {
 
         captureProcess.on("close", () => {
 
-            this.storeCapInfo(streamer.uid, "", null);
-
             fs.stat(this.config.captureDirectory + "/" + fullname, (err, stats) => {
                 if (err) {
                     if (err.code === "ENOENT") {
@@ -416,9 +411,11 @@ class Site {
                     } else {
                         this.errMsg(colors.name(streamer.nm) + ": " + err.toString());
                     }
+                    this.storeCapInfo(streamer.uid, "", null);
                 } else if (stats.size <= this.config.minByteSize) {
                     this.msg(colors.name(streamer.nm) + " recording automatically deleted (size=" + stats.size + " < minSizeBytes=" + this.config.minByteSize + ")");
                     fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
+                    this.storeCapInfo(streamer.uid, "", null);
                 } else {
                     this.postProcess(streamer, filename);
                 }
@@ -467,19 +464,18 @@ class Site {
         mySpawnArguments.push("-copyts");
         mySpawnArguments.push(completeDir + "/" + filename + "." + this.config.autoConvertType);
 
-        this.semaphore++;
-        this.msg(colors.name(streamer.nm) + " converting to " + filename + "." + this.config.autoConvertType);
-
         const myCompleteProcess = childProcess.spawn("ffmpeg", mySpawnArguments);
-        this.storeCapInfo(streamer.uid, filename + "." + this.config.autoConvertType, null);
+        this.msg(colors.name(streamer.nm) + " converting to " + filename + "." + this.config.autoConvertType);
+        this.storeCapInfo(streamer.uid, filename + "." + this.config.autoConvertType, myCompleteProcess);
 
         myCompleteProcess.on("close", () => {
             if (!this.config.keepTsFile) {
                 fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
             }
             this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
+
+            // Note: setting captureProcess to null releases program to exit
             this.storeCapInfo(streamer.uid, "", null);
-            this.semaphore--; // release semaphore only when ffmpeg process has ended
         });
 
         myCompleteProcess.on("error", (err) => {

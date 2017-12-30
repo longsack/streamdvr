@@ -192,13 +192,11 @@ function mainSiteLoop(site) {
 
 function busy() {
     let capsInProgress = 0;
-    let semaphore = 0;
 
     for (let i = 0; i < SITES.length; i++) {
         capsInProgress += SITES[i].getNumCapsInProgress();
-        semaphore      += SITES[i].semaphore;
     }
-    return semaphore > 0 || capsInProgress > 0;
+    return capsInProgress > 0;
 }
 
 function tryExit() {
