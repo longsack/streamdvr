@@ -18,21 +18,16 @@ const CB         = require("./cb");
 const TWITCH     = require("./twitch");
 
 let tryingToExit = 0;
-const config     = yaml.safeLoad(fs.readFileSync("config.yml", "utf8"));
-
+let config;
 let mfc = null;
 let cb = null;
 let twitch = null;
 const SITES = [];
-
 const logFile = fs.createWriteStream(path.resolve() + "/streamdvr.log", {flags: "w"});
 
 console.log = function(msg) {
     logFile.write(util.format(msg) + "\n");
 };
-
-const total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
-let inst = 1;
 
 const screen = blessed.screen({smartCSR: true});
 screen.title = "streamdvr";
@@ -117,6 +112,26 @@ function updateList(cmd, site, nm, isTemp) {
     }
 }
 
+function loadConfig() {
+    config = yaml.safeLoad(fs.readFileSync("config.yml", "utf8"));
+
+    colors.setTheme({
+        name:    config.namecolor,
+        state:   config.statecolor,
+        offline: config.offlinecolor,
+        file:    config.filecolor,
+        time:    config.timecolor,
+        site:    config.sitecolor,
+        debug:   config.debugcolor,
+        error:   config.errorcolor
+    });
+
+    display(config.listshown ? "show" : "hide", "list");
+    display(config.logshown  ? "show" : "hide", "log");
+
+    screen.render();
+}
+
 // CLI
 inputBar.on("submit", (text) => {
     inputBar.clearValue();
@@ -136,6 +151,10 @@ inputBar.on("submit", (text) => {
         }
         break;
 
+    case "reload":
+        loadConfig();
+        break;
+
     case "show":
     case "hide":
         if (tokens.length >= 2) {
@@ -148,6 +167,7 @@ inputBar.on("submit", (text) => {
         logbody.pushLine("add     [site] [streamer]");
         logbody.pushLine("addtemp [site] [streamer]");
         logbody.pushLine("remove  [site] [streamer]");
+        logbody.pushLine("reload");
         logbody.pushLine("show    [log|list]");
         logbody.pushLine("hide    [log|list]");
         logbody.setScrollPerc(100);
@@ -257,6 +277,11 @@ process.on("SIGINT", () => {
     exit();
 });
 
+loadConfig();
+
+const total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
+let inst = 1;
+
 config.captureDirectory  = path.resolve(config.captureDirectory);
 config.completeDirectory = path.resolve(config.completeDirectory);
 
@@ -272,17 +297,6 @@ mkdirp(config.completeDirectory, (err) => {
         log(err.toString());
         process.exit(1);
     }
-});
-
-colors.setTheme({
-    name:    config.namecolor,
-    state:   config.statecolor,
-    offline: config.offlinecolor,
-    file:    config.filecolor,
-    time:    config.timecolor,
-    site:    config.sitecolor,
-    debug:   config.debugcolor,
-    error:   config.errorcolor
 });
 
 if (config.enableMFC) {
@@ -322,15 +336,8 @@ if (!config.listshown) {
     display("hide", "list");
 }
 
-if (!config.logshown) {
-    display("hide", "log");
-}
-
 screen.append(logbody);
 screen.append(inputBar);
-
-// Have to render screen once before printouts work
-screen.render();
 logbody.focus();
 
 if (config.enableMFC) {
