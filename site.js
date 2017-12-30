@@ -9,7 +9,7 @@ const childProcess = require("child_process");
 const blessed      = require("blessed");
 
 class Site {
-    constructor(siteName, config, siteDir, screen, logbody, inst, total) {
+    constructor(siteName, config, siteDir, tui, inst, total) {
         // Sitename includes spaces to align log columns easily.
         // Use .trim() as needed.
         this.siteName = siteName;
@@ -19,14 +19,13 @@ class Site {
         this.config = config;
 
         // sitename.yml
-        this.listConfig = yaml.safeLoad(fs.readFileSync(this.listName + ".yml", "utf8"));
+        this.siteConfig = yaml.safeLoad(fs.readFileSync(this.listName + ".yml", "utf8"));
 
         // Custom site directory suffix
         this.siteDir = siteDir;
 
         // Blessed UI elements
-        this.screen = screen;
-        this.logbody = logbody;
+        this.tui = tui;
 
         // Site instance number and site total number
         this.inst = inst;
@@ -110,8 +109,8 @@ class Site {
             }
         });
 
-        screen.append(this.title);
-        screen.append(this.list);
+        this.tui.screen.append(this.title);
+        this.tui.screen.append(this.list);
 
         this.title.pushLine(colors.site(this.siteName));
     }
@@ -180,6 +179,9 @@ class Site {
         }
     }
 
+    disconnect() {
+    }
+
     getCaptureArguments(url, filename) {
         return [
             "-hide_banner",
@@ -238,14 +240,14 @@ class Site {
 
     updateList(streamer, add, isTemp) {
         let dirty = false;
-        let list = isTemp ? this.tempList : this.listConfig.streamers;
+        let list = isTemp ? this.tempList : this.siteConfig.streamers;
         if (add) {
             if (this.addStreamer(streamer, list, isTemp)) {
                 list.push(streamer.uid);
                 dirty = !isTemp;
             }
         } else if (this.removeStreamer(streamer, list)) {
-            if (this.listConfig.streamers.indexOf(streamer.uid) !== -1) {
+            if (this.siteConfig.streamers.indexOf(streamer.uid) !== -1) {
                 list = _.without(list, streamer.uid);
                 dirty = !isTemp;
             }
@@ -253,9 +255,11 @@ class Site {
         if (isTemp) {
             this.tempList = list;
         } else {
-            this.listConfig.streamers = list;
+            this.siteConfig.streamers = list;
         }
-        return dirty;
+        if (dirty) {
+            this.writeConfig();
+        }
     }
 
     updateStreamers(bundle, add) {
@@ -306,6 +310,17 @@ class Site {
         }
     }
 
+    getStreamers(bundle) {
+        if (bundle.dirty) {
+            this.writeConfig();
+        }
+        if (this.tui.tryingToExit) {
+            this.dbgMsg("Skipping lookup while exit in progress...");
+            return false;
+        }
+        return true;
+    }
+
     storeCapInfo(uid, filename, captureProcess) {
         if (this.streamerList.has(uid)) {
             const streamer = this.streamerList.get(uid);
@@ -315,16 +330,16 @@ class Site {
         }
     }
 
-    recordStreamers(streamersToCap) {
-        if (streamersToCap === null || streamersToCap.length === 0) {
+    recordStreamers(streamers) {
+        if (streamers === null || streamers.length === 0) {
             return null;
         }
 
         const caps = [];
 
-        this.dbgMsg(streamersToCap.length + " streamer(s) to capture");
-        for (let i = 0; i < streamersToCap.length; i++) {
-            const cap = this.setupCapture(streamersToCap[i]).then((bundle) => {
+        this.dbgMsg(streamers.length + " streamer(s) to capture");
+        for (let i = 0; i < streamers.length; i++) {
+            const cap = this.setupCapture(streamers[i]).then((bundle) => {
                 if (bundle.spawnArgs !== "") {
                     this.startCapture(bundle.streamer, bundle.filename, bundle.spawnArgs);
                 }
@@ -364,7 +379,7 @@ class Site {
     writeConfig() {
         const filename = this.listName + ".yml";
         this.dbgMsg("Rewriting " + filename);
-        fs.writeFileSync(filename, yaml.safeDump(this.listConfig), "utf8");
+        fs.writeFileSync(filename, yaml.safeDump(this.siteConfig), "utf8");
     }
 
     setupCapture(uid) {
@@ -484,11 +499,8 @@ class Site {
     }
 
     msg(msg) {
-        const line = colors.time("[" + this.getDateTime() + "]") + " " + colors.site(this.siteName) + " " + msg;
-        this.logbody.pushLine(line);
-        this.logbody.setScrollPerc(100);
-        this.screen.render();
-        console.log(line);
+        const text = colors.time("[" + this.getDateTime() + "]") + " " + colors.site(this.siteName) + " " + msg;
+        this.tui.log(text);
     }
 
     errMsg(msg) {
@@ -531,7 +543,9 @@ class Site {
             line += colors.file(value.filename);
             this.list.pushLine(line);
         }
-        this.screen.render();
+        if (typeof this.screen !== "undefined") {
+            this.screen.render();
+        }
     }
 }
 
