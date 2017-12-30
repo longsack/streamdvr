@@ -530,18 +530,17 @@ class Site {
             return 0;
         });
 
+        const pad = "                           ";
         for (let i = 0; i < sortedKeys.length; i++) {
             const value = this.streamerList.get(sortedKeys[i]);
-            let line = colors.name(value.nm);
-            for (let j = 0; j < 16 - value.nm.length; j++) {
-                line += " ";
+            const name  = (colors.name(value.nm) + pad).substring(0, pad.length);
+            let state;
+            if (value.filename === "") {
+                state = value.state === "Offline" ? colors.offline(value.state) : colors.state(value.state);
+            } else {
+                state = colors.file(value.filename);
             }
-            line += value.state === "Offline" ? colors.offline(value.state) : colors.state(value.state);
-            for (let j = 0; j < 16 - value.state.length; j++) {
-                line += " ";
-            }
-            line += colors.file(value.filename);
-            this.list.pushLine(line);
+            this.list.pushLine(name + state);
         }
         if (typeof this.screen !== "undefined") {
             this.screen.render();
