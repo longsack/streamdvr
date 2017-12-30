@@ -187,6 +187,7 @@ class Tui {
             }
             break;
         }
+        this.render();
     }
 
     // Add and remove streamers
