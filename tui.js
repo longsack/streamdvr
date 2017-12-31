@@ -137,9 +137,9 @@ class Tui {
 
         for (let i = 0; i < this.SITES.length; i++) {
             const siteName = this.SITES[i].siteName.trim().toLowerCase();
-            if ((this.config.enableMFC && siteName === "mfc") ||
-                (this.config.enableCB  && siteName === "cb") ||
-                (this.config.enableMFC && siteName === "twitch")) {
+            if ((this.config.enableMFC    && siteName === "mfc") ||
+                (this.config.enableCB     && siteName === "cb") ||
+                (this.config.enableTwitch && siteName === "twitch")) {
 
                 this.SITES[i].msg(this.SITES[i].siteConfig.streamers.length + " streamer(s) in config");
             }
