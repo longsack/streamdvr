@@ -10,10 +10,15 @@ const blessed      = require("blessed");
 
 class Site {
     constructor(siteName, config, siteDir, tui, inst, total) {
+        // For sizing columns
+        this.logpad  = "         ";
+        this.listpad = "                           ";
+
         // Sitename includes spaces to align log columns easily.
         // Use .trim() as needed.
         this.siteName = siteName;
-        this.listName = siteName.trim().toLowerCase();
+        this.padName  = (siteName + this.logpad).substring(0, this.logpad.length);
+        this.listName = siteName.toLowerCase();
 
         // Handle to the cross-site config.yml
         this.config = config;
@@ -55,10 +60,11 @@ class Site {
         let height;
 
         if (total === 4) {
-            top  = inst === 4 ? 0 : inst === 3 ? "50%" : inst === 2 ? 0 : "50%";
+            top  = inst === 4 ? "33%" : inst === 3 ? "33%" : inst === 2 ? 0 : 0;
             left = inst === 4 ? "50%" : inst === 3 ? 0 : inst === 2 ? "50%" : 0;
             width = "50%";
             height = "33%-1";
+            this.dbgMsg("inst = " + inst + ", top = " + top + ", left = " + left);
         } else if (total === 3) {
             top = 0;
             left = inst === 3 ? "66%+1" : inst === 2 ? "33%" : 0;
@@ -80,7 +86,7 @@ class Site {
         this.title = blessed.box({
             top: top,
             left: left,
-            height: 1,
+            height: height,
             width: width,
             keys: false,
             mouse: false,
@@ -89,7 +95,7 @@ class Site {
         });
 
         this.list = blessed.box({
-            top: top + 1,
+            top: top === 0 ? 1 : top + "+1",
             left: left,
             height: height,
             width: width,
@@ -127,6 +133,10 @@ class Site {
 
     full() {
         if (this.total === 4) {
+            if (this.inst >= 3) {
+                this.title.top = "50%";
+                this.list.top = "50%+1";
+            }
             this.list.height = "50%-2";
         } else {
             this.list.height = "100%-2";
@@ -135,6 +145,10 @@ class Site {
 
     restore() {
         if (this.total === 4) {
+            if (this.inst >= 3) {
+                this.title.top = "33%";
+                this.list.top = "33%+1";
+            }
             this.list.height = "33%-1";
         } else {
             this.list.height = "66%-1";
@@ -499,7 +513,7 @@ class Site {
     }
 
     msg(msg) {
-        const text = colors.time("[" + this.getDateTime() + "]") + " " + colors.site(this.siteName) + " " + msg;
+        const text = colors.time("[" + this.getDateTime() + "] ") + colors.site(this.padName) + msg;
         this.tui.log(text);
     }
 
@@ -530,10 +544,9 @@ class Site {
             return 0;
         });
 
-        const pad = "                           ";
         for (let i = 0; i < sortedKeys.length; i++) {
             const value = this.streamerList.get(sortedKeys[i]);
-            const name  = (colors.name(value.nm) + pad).substring(0, pad.length);
+            const name  = (colors.name(value.nm) + this.listpad).substring(0, this.listpad.length);
             let state;
             if (value.filename === "") {
                 state = value.state === "Offline" ? colors.offline(value.state) : colors.state(value.state);
