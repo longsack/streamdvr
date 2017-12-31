@@ -9,7 +9,7 @@ function promiseSerial(funcs) {
 
 class Cb extends site.Site {
     constructor(config, tui, inst, total) {
-        super("CB    ", config, "_cb", tui, inst, total);
+        super("CB", config, "_cb", tui, inst, total);
         this.cbData = new Map();
         this.timeOut = 20000;
 
