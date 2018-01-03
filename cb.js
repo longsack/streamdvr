@@ -76,10 +76,8 @@ class Cb extends site.Site {
             this.render();
             return true;
         }).catch((err) => {
-            this.errMsg("Unknown streamer " + colors.name(nm) + ", check the spelling.");
-            this.streamerList.delete(nm);
-            this.render();
-            return err;
+            this.errMsg(colors.name(nm), " lookup problem: " + err.toString());
+            return false;
         });
     }
 
@@ -92,6 +90,7 @@ class Cb extends site.Site {
 
         return Promise.all(queries).then(() => true).catch((err) => {
             this.errMsg(err.toString());
+            return false;
         });
     }
 
@@ -131,7 +130,6 @@ class Cb extends site.Site {
     }
 
     setupCapture(streamer) {
-
         if (!super.setupCapture(streamer.uid)) {
             const empty = {spawnArgs: "", filename: "", streamer: ""};
             return Promise.try(() => empty);
