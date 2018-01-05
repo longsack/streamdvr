@@ -8,8 +8,10 @@ const colors       = require("colors/safe");
 const childProcess = require("child_process");
 const blessed      = require("blessed");
 
+let inst = 1;
+
 class Site {
-    constructor(siteName, config, siteDir, tui, inst, total) {
+    constructor(siteName, config, siteDir, tui) {
         // For sizing columns
         this.logpad  = "         ";
         this.listpad = "                           ";
@@ -32,9 +34,8 @@ class Site {
         // Blessed UI elements
         this.tui = tui;
 
-        // Site instance number and site total number
-        this.inst = inst;
-        this.total = total;
+        // determines position in UI
+        this.inst = inst++;
 
         // Temporary data store used by child classes for outstanding status
         // lookup threads.  Is cleared and repopulated during each loop
@@ -59,23 +60,22 @@ class Site {
         let width;
         let height;
 
-        if (total === 4) {
-            top  = inst === 4 ? "33%" : inst === 3 ? "33%" : inst === 2 ? 0 : 0;
-            left = inst === 4 ? "50%" : inst === 3 ? 0 : inst === 2 ? "50%" : 0;
+        if (tui.total === 4) {
+            top  = this.inst === 4 ? "33%" : this.inst === 3 ? "33%" : this.inst === 2 ? 0 : 0;
+            left = this.inst === 4 ? "50%" : this.inst === 3 ? 0 : this.inst === 2 ? "50%" : 0;
             width = "50%";
             height = "33%-1";
-            this.dbgMsg("inst = " + inst + ", top = " + top + ", left = " + left);
-        } else if (total === 3) {
+        } else if (tui.total === 3) {
             top = 0;
-            left = inst === 3 ? "66%+1" : inst === 2 ? "33%" : 0;
-            width = inst === 1 ? "33%" : "33%+1";
+            left = this.inst === 3 ? "66%+1" : this.inst === 2 ? "33%" : 0;
+            width = this.inst === 1 ? "33%" : "33%+1";
             height = "66%-1";
-        } else if (total === 2) {
+        } else if (tui.total === 2) {
             top = 0;
-            left = inst === 2 ? "50%" : 0;
+            left = this.inst === 2 ? "50%" : 0;
             width = "50%";
             height = "66%-1";
-        } else if (total === 1) {
+        } else if (tui.total === 1) {
             top = 0;
             left = 0;
             width = "100%";
@@ -107,7 +107,7 @@ class Site {
             shadow: false,
             scrollbar: {
                 ch: " ",
-                bg: "red"
+                bg: "blue"
             },
             border : {
                 type: "line",
@@ -132,7 +132,7 @@ class Site {
     }
 
     full() {
-        if (this.total === 4) {
+        if (this.tui.total === 4) {
             if (this.inst >= 3) {
                 this.title.top = "50%";
                 this.list.top = "50%+1";
@@ -144,7 +144,7 @@ class Site {
     }
 
     restore() {
-        if (this.total === 4) {
+        if (this.tui.total === 4) {
             if (this.inst >= 3) {
                 this.title.top = "33%";
                 this.list.top = "33%+1";
@@ -194,6 +194,7 @@ class Site {
     }
 
     disconnect() {
+        // pure virtual method
     }
 
     getCaptureArguments(url, filename) {
@@ -501,10 +502,12 @@ class Site {
             if (!this.config.keepTsFile) {
                 fs.unlinkSync(this.config.captureDirectory + "/" + fullname);
             }
-            this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
 
             // Note: setting captureProcess to null releases program to exit
             this.storeCapInfo(streamer.uid, "", null);
+
+            // Note: msg last since it rerenders screen.
+            this.msg(colors.name(streamer.nm) + " done converting " + filename + "." + this.config.autoConvertType);
         });
 
         myCompleteProcess.on("error", (err) => {

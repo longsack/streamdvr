@@ -4,9 +4,9 @@ const fetch        = require("node-fetch");
 const childProcess = require("child_process");
 const site         = require("./site");
 
-class Twitch extends site.Site {
+class IFriends extends site.Site {
     constructor(config, tui) {
-        super("TWITCH", config, "_twitch", tui);
+        super("IFRIENDS", config, "_ifriends", tui);
 
         for (let i = 0; i < this.siteConfig.streamers.length; i++) {
             const nm = this.siteConfig.streamers[i];
@@ -19,16 +19,16 @@ class Twitch extends site.Site {
     }
 
     checkStreamerState(nm) {
-        const url = "https://api.twitch.tv/kraken/streams/" + nm + "?client_id=rznf9ecq10bbcwe91n6hhnul3dbpg9";
+        const url = "https://www.ifriends.net/userurl_membrg/live/?psource=lbgrid_altlivebutton10_v2&pclub=" + nm;
 
-        return Promise.try(() => fetch(url)).then((res) => res.json()).then((json) => {
+        return Promise.try(() => fetch(url)).then((res) => res.text()).then((text) => {
             const streamer = this.streamerList.get(nm);
             const prevState = streamer.state;
 
             let isStreaming = 0;
             let msg = colors.name(nm);
 
-            if (typeof json.stream === "undefined" || json.stream === null) {
+            if (text) {
                 msg += " is offline.";
                 streamer.state = "Offline";
             } else {
@@ -79,20 +79,9 @@ class Twitch extends site.Site {
             const spawnArgs = this.getCaptureArguments(url, filename);
 
             return {spawnArgs: spawnArgs, filename: filename, streamer: streamer};
-        }).catch((err) => {
-            // Twitch API will list a streamer as online, even when they have
-            // ended the stream.  youtbue-dl will return an error in this case.
-            const offline = "is offline";
-            if (err.toString().indexOf(offline) !== -1) {
-                const item = this.streamerList.get(streamer.nm);
-                item.state = "Offline";
-                this.msg(colors(streamer.nm) + " is offline.");
-            } else {
-                this.errMsg(colors(streamer.nm) + ": " + err.toString());
-            }
         });
     }
 }
 
-exports.Twitch = Twitch;
+exports.IFriends = IFriends;
 

@@ -5,8 +5,8 @@ const _       = require("underscore");
 const colors  = require("colors/safe");
 
 class Mfc extends site.Site {
-    constructor(config, tui, inst, total) {
-        super("MFC", config, "_mfc", tui, inst, total);
+    constructor(config, tui) {
+        super("MFC", config, "_mfc", tui);
         mfc.setLogLevel(0);
         this.mfcGuest = new mfc.Client("guest", "guest", {useWebSockets: this.siteConfig.mfcWebsocket, camYou: false});
     }
@@ -123,7 +123,6 @@ class Mfc extends site.Site {
     }
 
     setupCapture(model) {
-
         if (!super.setupCapture(model.uid)) {
             const empty = {spawnArgs: "", filename: "", streamer: ""};
             return Promise.try(() => empty);

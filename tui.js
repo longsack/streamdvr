@@ -14,6 +14,8 @@ class Tui {
         // Handle to the cross-site config.yml
         this.config = config;
 
+        this.total = Number(config.enableMFC) + Number(config.enableCB) + Number(config.enableTwitch);
+
         this.screen = blessed.screen({smartCSR: true});
         this.screen.title = "streamdvr";
 
@@ -31,7 +33,7 @@ class Tui {
             scrollable: true,
             scrollbar: {
                 ch: " ",
-                bg: "red"
+                bg: "blue"
             }
         });
 
@@ -45,7 +47,7 @@ class Tui {
             inputOnFocus: true,
             style: {
                 fg: "white",
-                bg: "blue"
+                bg: "none"
             }
         });
 
@@ -136,10 +138,10 @@ class Tui {
         }
 
         for (let i = 0; i < this.SITES.length; i++) {
-            const siteName = this.SITES[i].siteName.trim().toLowerCase();
-            if ((this.config.enableMFC    && siteName === "mfc") ||
-                (this.config.enableCB     && siteName === "cb") ||
-                (this.config.enableTwitch && siteName === "twitch")) {
+            const siteName = this.SITES[i].listName;
+            if ((this.config.enableMFC      && siteName === "mfc") ||
+                (this.config.enableCB       && siteName === "cb") ||
+                (this.config.enableTwitch   && siteName === "twitch")) {
 
                 this.SITES[i].msg(this.SITES[i].siteConfig.streamers.length + " streamer(s) in config");
             }

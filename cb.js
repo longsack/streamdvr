@@ -8,8 +8,8 @@ function promiseSerial(funcs) {
 }
 
 class Cb extends site.Site {
-    constructor(config, tui, inst, total) {
-        super("CB", config, "_cb", tui, inst, total);
+    constructor(config, tui) {
+        super("CB", config, "_cb", tui);
         this.cbData = new Map();
         this.timeOut = 20000;
 
