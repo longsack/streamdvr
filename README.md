@@ -39,6 +39,11 @@ Refer to `config.yml`.
 * To run: `node streamdvr.js`
 * To run without color: `node streamdvr.js --no-color`
 
+* TUI navigation:
+    * Numbers 1-4 to focus an active site-list
+    * Enter to focus the input bar, enter again to focus the log if enabled
+    * Up/Down/PgUp/PgDn to scroll the active focus
+
 Console Commands
 ===========
 * add     [site] [streamer]
