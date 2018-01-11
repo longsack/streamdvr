@@ -311,11 +311,11 @@ class Site {
 
     removeStreamer(streamer) {
         this.msg(colors.name(streamer.nm) + " removed from capture list.");
+        this.haltCapture(streamer.uid);
         if (this.streamerList.has(streamer.uid)) {
             this.streamerList.delete(streamer.uid);
             this.render();
         }
-        this.haltCapture(streamer.uid);
         return true;
     }
 
